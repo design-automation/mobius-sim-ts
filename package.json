@@ -1,0 +1,14 @@
+{
+    "name": "mobius-sim-ts",
+    "version": "0.0.1",
+    "description": "Typescript library for reading and writing Mobius SIM files",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 0"
+    },
+    "keywords": [],
+    "author": "DA",
+    "license": "MIT",
+    "dependencies": {
+        "lodash": "^4.17.21"
+    }
+}
