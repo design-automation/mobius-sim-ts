@@ -1,6 +1,6 @@
 import { cloneDeep } from 'lodash';
 // types
-type TGraphEdges = Map<string, string[]>;
+type TGraphEdges = Map<string, Set<string>>;
 type TGraphFREdges = Map<number, TGraphEdges>;
 type TGraphEdgeTypes = Map<string, TGraphFREdges>;
 type TGraphSnapshots = Map<number, TGraphEdgeTypes>;
@@ -12,8 +12,6 @@ export class Graph {
     //
     private static FWD: number = 0;
     private static REV: number = 1;
-    private static STATIC: number = 0;
-    private static DYNAMIC: number = 1;
     private _nodes: Map<string, object>;
     private _edge_types: Map<string, number>;
     private _edges: TGraphSnapshots;
@@ -27,10 +25,10 @@ export class Graph {
         // edge_types, key is edge_type, value is the snapshot id
         this._edge_types = new Map();
         // edges, nested dictionaries four levels deep
-        // first level is the snapshot Map, key is the ssid, value is an Map
-        // second level for each ssid, key is the edge_type, value is an Map
-        // third level for each edge type, key is FWD or REV, value is Map
-        // fourth level, for each edge_type, key is a start node, value is a list of end nodes
+        // first level, key is the ssid, value is an Map
+        // second level, key is the edge_type, value is an Map
+        // third level, key is FWD or REV, value is Map
+        // fourth level, key is a start node, value is a list of end nodes
         this._edges = new Map();
         // init snapshot 0
         this._edges.set(0, new Map());
@@ -68,7 +66,7 @@ export class Graph {
     /**
      * Get a list of nodes that have an outgoing edge of type edge_type.
      * @param edge_type: The edge type.
-     * @param ssid: Snapshot ID.
+     * @param ssid: Snapshot ID (optional).
      * @returns: A list of node names.
      */
     public getNodesWithOutEdge(edge_type: string, ssid: number = null): string[] {
@@ -85,7 +83,7 @@ export class Graph {
     /**
      * Get a list of nodes that have an incoming edge of type edge_type.
      * @param edge_type: The edge type.
-     * @param ssid: Snapshot ID.
+     * @param ssid: Snapshot ID (optional).
      * @returns: A list of node names.
      */
     public getNodesWithInEdge(edge_type: string, ssid: number = null): string[] {
@@ -114,7 +112,7 @@ export class Graph {
      * @param node1: The name of the end node.
      * @param edge_type: The edge type.
      */
-    public addEdge(node0: string, node1: string, edge_type: string): void {
+    public addEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
         if (!this._nodes.has(node0) && this._nodes.has(node1)) {
             throw new Error('Node does not exist.');
         }
@@ -124,18 +122,21 @@ export class Graph {
         if (node0 === node1) {
             throw new Error('Nodes cannot be the same.')
         }
-        const edges = this._edges.get(this._curr_ssid).get(edge_type);
-        // add edge from n0 to n1
+        // get ssid
+        if (ssid === null) { ssid = this._curr_ssid; }
+        // get edges
+        const edges = this._edges.get(ssid).get(edge_type);
+        // add fwd edge from n0 to n1
         if (edges.get(Graph.FWD).has(node0)) {
-            edges.get(Graph.FWD).get(node0).push( node1 );
+            edges.get(Graph.FWD).get(node0).add( node1 );
         } else {
-            edges.get(Graph.FWD).set(node0, [node1]);
+            edges.get(Graph.FWD).set(node0, new Set([node1]));
         }
         // add rev edge from n1 to n0
         if (edges.get(Graph.REV).has(node1)) {
-            edges.get(Graph.REV).get(node1).push( node0 );
+            edges.get(Graph.REV).get(node1).add( node0 );
         } else {
-            edges.get(Graph.REV).set(node1, [node0]);
+            edges.get(Graph.REV).set(node1, new Set([node0]));
         }
     }
     // ----------------------------------------------------------------------------------------------
@@ -144,7 +145,7 @@ export class Graph {
      * @param node0: The name of the start node.
      * @param node1: The name of the end node.
      * @param edge_type: The edge type.
-     * @param ssid: Snapshot ID.
+     * @param ssid: Snapshot ID (optional).
      * @returns: True if the edge exists, false otherwise.
      */
     public hasEdge(node0: string, node1: string, edge_type: string, ssid: number = null): boolean {
@@ -154,12 +155,45 @@ export class Graph {
         if (!this._edge_types.has(edge_type)) {
             throw new Error('Edge type does not exist.');
         }
+        // get ssid
+        if (ssid === null) { ssid = this._curr_ssid; }
         // check if edge exists 
-        const edges_fwd = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD);
+        const edges_fwd = this._edges.get(ssid).get(edge_type).get(Graph.FWD);
         if (!edges_fwd.has(node0)) {
             return false;
         }
-        return edges_fwd.get(node0).includes(node1);
+        return edges_fwd.get(node0).has(node1);
+    }
+    // ----------------------------------------------------------------------------------------------
+    /**
+     * Delete the edge from n0 to n1 in the graph.
+     * @param node0: The name of the start node.
+     * @param node1: The name of the end node.
+     * @param edge_type: The edge type.
+     * @param ssid: Snapshot ID (optional).
+     * @returns: True if the edge exists, false otherwise.
+     */
+     public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
+        if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
+            throw new Error('Node does not exist.');
+        }
+        if (!this._edge_types.has(edge_type)) {
+            throw new Error('Edge type does not exist.');
+        }
+        // get ssid
+        if (ssid === null) { ssid = this._curr_ssid; }
+        // get edges
+        const edges = this._edges.get(ssid).get(edge_type);
+        // del fwd edge from n0 to n1
+        if (!edges.get(Graph.FWD).has(node0)) {
+            throw new Error('Edge does not exist.');
+        }
+        const deleted: boolean = edges.get(Graph.FWD).get(node0).delete(node1);
+        if (!deleted) {
+            throw new Error('Edge does not exist.');
+        }
+        // del rev edge from n1 to n0
+        edges.get(Graph.REV).get(node1).delete(node0);
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -205,11 +239,11 @@ export class Graph {
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // get successors
-        const edges_fwd = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD);
+        const edges_fwd = this._edges.get(ssid).get(edge_type).get(Graph.FWD);
         if (!edges_fwd.has(node)) {
             return [];
         }
-        return edges_fwd.get(node);
+        return Array.from(edges_fwd.get(node));
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -219,7 +253,7 @@ export class Graph {
      * If the edge type starts with 'o' (i.e. 'o2o' or 'o2m'), then an error is thrown.
      * @param node: The name of the node from which to find predecessors.
      * @param edge_type: The edge type.
-     * @param ssid: Snapshot ID.
+     * @param ssid: Snapshot ID (optional).
      * @returns: A list of nodes names, or a single node name.
      */
     public predecessors(node: string, edge_type: string, ssid: number = null): string[] {
@@ -232,11 +266,11 @@ export class Graph {
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // get predecessors
-        const edges_rev = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV);
+        const edges_rev = this._edges.get(ssid).get(edge_type).get(Graph.REV);
         if (!edges_rev.has(node)) {
             return [];
         }
-        return edges_rev.get(node);
+        return Array.from(edges_rev.get(node));
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -244,7 +278,7 @@ export class Graph {
      * The 'in degree' is the number of reverse edges of type 'ent_type' linked to node 'n'.
      * @param node: The name of the node for which to count incoming edges.
      * @param edge_type: The edge type.
-     * @param ssid: Snapshot ID.
+     * @param ssid: Snapshot ID (optional).
      * @returns: An integer, the number of incoming edges.
      */
     public degreeIn(node: string, edge_type: string, ssid: number = null): number {
@@ -257,11 +291,11 @@ export class Graph {
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // calc reverse degree
-        const edges_rev = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV);
+        const edges_rev = this._edges.get(ssid).get(edge_type).get(Graph.REV);
         if (!edges_rev.has(node)) {
             return 0;
         }
-        return edges_rev.get(node).length;
+        return edges_rev.get(node).size;
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -269,7 +303,7 @@ export class Graph {
      * The 'out degree' is the number of forward edges of type 'ent_type' linked to node 'n'.
      * @param node: The name of the node for which to count outgoing edges.
      * @param edge_type: The edge type.
-     * @param ssid: Snapshot ID.
+     * @param ssid: Snapshot ID (optional).
      * @returns: An integer, the number of outgoing edges.
      */
     public degreeOut(node: string, edge_type: string, ssid: number = null): number {
@@ -282,11 +316,11 @@ export class Graph {
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // calc forward degree
-        const edges_fwd = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD);
+        const edges_fwd = this._edges.get(ssid).get(edge_type).get(Graph.FWD);
         if (!edges_fwd.has(node)) {
             return 0;
         }
-        return edges_fwd.get(node).length;
+        return edges_fwd.get(node).size;
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -295,8 +329,8 @@ export class Graph {
      * @param edge_type: The edge type.
      * @returns: An integer, the number of edges.
      */
-    public degree(node: string, edge_type: string): number {
-        return this.degreeIn(node, edge_type) + this.degreeOut(node, edge_type);
+    public degree(node: string, edge_type: string, ssid: number = null): number {
+        return this.degreeIn(node, edge_type, ssid) + this.degreeOut(node, edge_type, ssid);
     }
     // ----------------------------------------------------------------------------------------------
     /**

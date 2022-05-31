@@ -52,3 +52,17 @@ test('Get edges', () => {
     expect(gr.degreeOut('aa', 'edge_x')).toBe(2);
     expect(gr.degreeIn('aa', 'edge_x')).toBe(0);
 });
+
+
+test('Node props', () => {
+    const gr: Graph = new Graph();
+    gr.addNode('aa');
+    gr.addNode('bb');
+    gr.addEdgeType('edge_x');
+    gr.addEdge('aa', 'bb', 'edge_x');
+    expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeTruthy();
+    gr.delEdge('aa', 'bb', 'edge_x');
+    expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeFalsy();
+    gr.addEdge('aa', 'bb', 'edge_x');
+    expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeTruthy();
+});
