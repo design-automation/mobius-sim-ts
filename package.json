@@ -3,12 +3,17 @@
     "version": "0.0.1",
     "description": "Typescript library for reading and writing Mobius SIM files",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 0"
+        "test": "jest"
     },
     "keywords": [],
     "author": "DA",
     "license": "MIT",
     "dependencies": {
         "lodash": "^4.17.21"
+    },
+    "devDependencies": {
+        "@types/jest": "^27.5.1",
+        "jest": "^28.1.0",
+        "ts-jest": "^28.0.3"
     }
 }

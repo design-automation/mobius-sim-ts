@@ -1,39 +1,6 @@
 import { cloneDeep } from 'lodash';
-// types
-type TGraphEdges = Map<string, string[]>;
-type TGraphFREdges = Map<number, TGraphEdges>;
-type TGraphEdgeTypes = Map<string, TGraphFREdges>;
-type TGraphSnapshots = Map<number, TGraphEdgeTypes>;
-type TAttribDataTypes = string | number | boolean | any[] | object;
 // Graph class
 export class Graph {
-    // The graph is created using a Map of nodes and nested Maps of edges.
-    // 
-    // For each edge type, there are two dicts, forward and reverse.
-    // These edges dicts vary based on the edge type.
-    // 
-    // M2M forward: key = start node, value = [end nodes]
-    // M2M reverse: key = start node, value = [end nodes]
-    // 
-    // M2O forward: key = start node, value = single end node
-    // M2O reverse: key = start node, value = [end nodes]
-    // 
-    // O2M forward: key = start node, value = [end nodes]
-    // O2M reverse: key = start node, value = single end node
-    // 
-    // O2O forward: key = start node, value = single end node
-    // O2O reverse: key = start node, value = single end node
-    //
-    static O2O: string = 'o2o'; // one to one
-    static M2M: string = 'm2m'; // many to many
-    static M2O: string = 'm2o'; // many to one
-    static O2M: string = 'o2m'; // one to many
-    static FWD: number = 0;
-    static REV: number = 1;
-    private _nodes: Map<string, Map<string, TAttribDataTypes>>;
-    private _edge_types: Map<string, string>;
-    private _edges: TGraphSnapshots;
-    private _curr_ssid: number;
     /**
      * CONSTRUCTOR
      */
@@ -50,7 +17,7 @@ export class Graph {
         this._edges = new Map();
         // init snapshot 0
         this._edges[0] = new Map();
-        this._curr_ssid = 0
+        this._curr_ssid = 0;
     }
     // ==============================================================================================
     // METHODS
@@ -60,7 +27,7 @@ export class Graph {
      * @param node: The name of the node, a string.
      * @param props: node properties, a dictionary of key-value pairs.
      */
-    public addNode(node: string, props:Map<string, TAttribDataTypes> ) {
+    addNode(node, props) {
         if (this._nodes.has(node)) {
             throw new Error('Node already exists.');
         }
@@ -69,10 +36,10 @@ export class Graph {
     // ----------------------------------------------------------------------------------------------
     /**
      * Get the properties of a node in the graph. Throws an error is the node does not exist.
-     * @param node: The name of the node, a string. 
+     * @param node: The name of the node, a string.
      * @returns: A dictionary of node properties.
      */
-    public getNodeProps(node: string) {
+    getNodeProps(node) {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
@@ -85,14 +52,16 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: A list of node names.
      */
-    public getNodesWithOutEdge(edge_type: string, ssid: number = null) {
+    getNodesWithOutEdge(edge_type, ssid = null) {
         if (!this._edge_types.has(edge_type)) {
             throw new Error('Edge type does not exist.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // get the nodes
-        return this._edges.get(ssid).get(edge_type).get(Graph.FWD).keys()
+        return this._edges.get(ssid).get(edge_type).get(Graph.FWD).keys();
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -101,14 +70,16 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: A list of node names.
      */
-    public getNodesWithInEdge(edge_type: string, ssid: number = null) {
+    getNodesWithInEdge(edge_type, ssid = null) {
         if (!this._edge_types.has(edge_type)) {
             throw new Error('Edge type does not exist.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // get the nodes
-        return this._edges.get(ssid).get(edge_type).get(Graph.REV).keys()
+        return this._edges.get(ssid).get(edge_type).get(Graph.REV).keys();
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -116,7 +87,7 @@ export class Graph {
      * @param node: The name of the node, a string.
      * @returns : True if the node exists, false otherwise.
      */
-    public hasNode(node: string) {
+    hasNode(node) {
         return node in this._nodes;
     }
     // ----------------------------------------------------------------------------------------------
@@ -126,23 +97,25 @@ export class Graph {
      * @param node1: The name of the end node.
      * @param edge_type: The edge type.
      */
-    public addEdge(node0: string, node1: string, edge_type: string) {
+    addEdge(node0, node1, edge_type) {
         if (!this._nodes.has(node0) && this._nodes.has(node1)) {
             throw new Error('Node does not exist.');
         }
         if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.')
+            throw new Error('Edge type does not exist.');
         }
         // add edge from n0 to n1
         if (this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD).has(node0)) {
-            this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD)[node0].push( node1 );
-        } else {
+            this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD)[node0].push(node1);
+        }
+        else {
             this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD)[node0] = [node1];
         }
         // add rev edge from n1 to n0
         if (this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV).has(node1)) {
-            this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV)[node1].push( node0 );
-        } else {
+            this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV)[node1].push(node0);
+        }
+        else {
             this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV)[node1] = [node0];
         }
     }
@@ -155,7 +128,7 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: True if the edge exists, false otherwise.
      */
-    public hasEdge(node0: string, node1: string, edge_type: string, ssid: number = null) {
+    hasEdge(node0, node1, edge_type, ssid = null) {
         if (!this._nodes.has(node0) && this._nodes.has(node1)) {
             throw new Error('Node does not exist.');
         }
@@ -174,9 +147,9 @@ export class Graph {
      * @param edge_type: The edge type.
      * @param x2x: One of 'm2m', 'm2o', 'o2m', 'o2o'.
      */
-    public addEdgeType(edge_type: string, x2x: string) {
+    addEdgeType(edge_type, x2x) {
         if (this._edge_types.has(edge_type)) {
-            throw new Error('Edge type already exists.')
+            throw new Error('Edge type already exists.');
         }
         this._edge_types[edge_type] = x2x;
         this._edges[this._curr_ssid][edge_type] = new Map();
@@ -189,7 +162,7 @@ export class Graph {
      * @param edge_type: The edge type.
      * @returns: True if the edge type exists, false otherwise.
      */
-    public hasEdgeType(edge_type: string) {
+    hasEdgeType(edge_type) {
         return edge_type in this._edge_types;
     }
     // ----------------------------------------------------------------------------------------------
@@ -203,7 +176,7 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: A single node name.
      */
-    public successor(node: string, edge_type: string, ssid: number = null) {
+    successor(node, edge_type, ssid = null) {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
@@ -216,10 +189,12 @@ export class Graph {
             throw new Error('Edge type has multiple successors.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // get successor
         if (!this._edges.get(ssid).get(edge_type).get(Graph.FWD).has(node)) {
-            return null
+            return null;
         }
         if (this._edges.get(ssid).get(edge_type).get(Graph.FWD).get(node).length === 0) {
             return null;
@@ -237,12 +212,12 @@ export class Graph {
      * @param ssid; Snapshot ID.
      * @returns: A list of nodes names.
      */
-    public successors(node: string, edge_type: string, ssid: number = null) {
+    successors(node, edge_type, ssid = null) {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
         if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.')
+            throw new Error('Edge type does not exist.');
         }
         // get the edge x2x
         const x2x = this._edge_types[edge_type];
@@ -250,7 +225,9 @@ export class Graph {
             throw new Error('Edge type has one successor.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // get successors
         if (!this._edges.get(ssid).get(edge_type).get(Graph.FWD).has(node)) {
             return [];
@@ -267,8 +244,8 @@ export class Graph {
      * @param edge_type: The edge type.
      * @param ssid: Snapshot ID.
      * @returns: A single node name.
-     */    
-    public predecessor(node: string, edge_type: string, ssid: number = null) {
+     */
+    predecessor(node, edge_type, ssid = null) {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
@@ -281,7 +258,9 @@ export class Graph {
             throw new Error('Edge type has multiple predecessors.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // get the predecessor
         if (!this._edges.get(ssid).get(edge_type).get(Graph.REV).has(node)) {
             return null;
@@ -302,7 +281,7 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: A list of nodes names, or a single node name.
      */
-    public predecessors(node: string, edge_type: string, ssid: number = null) {
+    predecessors(node, edge_type, ssid = null) {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
@@ -311,11 +290,13 @@ export class Graph {
         }
         // get the edge x2x
         const x2x = this._edge_types[edge_type];
-        if (x2x  === Graph.O2M || x2x === Graph.O2O) {
+        if (x2x === Graph.O2M || x2x === Graph.O2O) {
             throw new Error('Edge type has one predecessor.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // get predecessors
         if (!this._edges.get(ssid).get(edge_type).get(Graph.REV).has(node)) {
             return [];
@@ -331,15 +312,17 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: An integer, the number of incoming edges.
      */
-    public degree_in(node: string, edge_type: string, ssid: number = null) {
-        if (!this._nodes .has(node)) {
+    degree_in(node, edge_type, ssid = null) {
+        if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
         if (!this._edge_types.has(edge_type)) {
             throw new Error('Edge type does not exist.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // calc reverse degree
         if (!this._edges.get(ssid).get(edge_type).get(Graph.REV).has(node)) {
             return 0;
@@ -355,7 +338,7 @@ export class Graph {
      * @param ssid: Snapshot ID.
      * @returns: An integer, the number of outgoing edges.
      */
-    public degree_out(node: string, edge_type: string, ssid: number = null) {
+    degree_out(node, edge_type, ssid = null) {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist.');
         }
@@ -363,7 +346,9 @@ export class Graph {
             throw new Error('Edge type does not exist.');
         }
         // get ssid
-        if (ssid === null) { ssid = this._curr_ssid;}
+        if (ssid === null) {
+            ssid = this._curr_ssid;
+        }
         // calc forward degree
         if (!this._edges.get(ssid).get(edge_type).get(Graph.FWD).has(node)) {
             return 0;
@@ -377,7 +362,7 @@ export class Graph {
      * @param edge_type: The edge type.
      * @returns: An integer, the number of edges.
      */
-    public degree(node: string, edge_type: string) {
+    degree(node, edge_type) {
         return this.degree_in(node, edge_type) + this.degree_out(node, edge_type);
     }
     // ----------------------------------------------------------------------------------------------
@@ -385,13 +370,37 @@ export class Graph {
      * Takes a snapshot of the current set of edges in the graph.
      * @returns An integer, the ssid of the current snapshot.
      */
-    public snapshot() {
+    snapshot() {
         const prev_ssid = this._curr_ssid;
         this._curr_ssid += 1;
         this._edges.set(this._curr_ssid, cloneDeep(this._edges.get(prev_ssid)));
         return prev_ssid;
     }
 }
+// The graph is created using a Map of nodes and nested Maps of edges.
+// 
+// For each edge type, there are two dicts, forward and reverse.
+// These edges dicts vary based on the edge type.
+// 
+// M2M forward: key = start node, value = [end nodes]
+// M2M reverse: key = start node, value = [end nodes]
+// 
+// M2O forward: key = start node, value = single end node
+// M2O reverse: key = start node, value = [end nodes]
+// 
+// O2M forward: key = start node, value = [end nodes]
+// O2M reverse: key = start node, value = single end node
+// 
+// O2O forward: key = start node, value = single end node
+// O2O reverse: key = start node, value = single end node
+//
+Graph.O2O = 'o2o'; // one to one
+Graph.M2M = 'm2m'; // many to many
+Graph.M2O = 'm2o'; // many to one
+Graph.O2M = 'o2m'; // one to many
+Graph.FWD = 0;
+Graph.REV = 1;
 // ==================================================================================================
 // END GRAPH CLASS
 // ==================================================================================================
+//# sourceMappingURL=graph.js.map

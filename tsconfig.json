@@ -1,0 +1,36 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "outDir": "./build",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "target": "es2019",
+    "skipLibCheck": true,
+    "paths": {
+      "@assets/*" : ["src/assets/*"],
+
+    },
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "lib": [
+      "es2019",
+      "dom"
+    ],
+    "module": "esnext",
+    "baseUrl": "./",
+    "allowSyntheticDefaultImports":true
+  },
+  "exclude": [
+    "**/*.test.ts",
+    "build",
+    "node_modules"
+  ],
+  "include" : [
+    "src/**/*"
+  ]
+}
