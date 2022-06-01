@@ -76,9 +76,6 @@ export class Graph {
      * @returns: A list of node names.
      */
     public getNodesWithOutEdge(edge_type: string, ssid: number = null): string[] {
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // get the nodes
@@ -93,9 +90,6 @@ export class Graph {
      * @returns: A list of node names.
      */
     public getNodesWithInEdge(edge_type: string, ssid: number = null): string[] {
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // get the nodes
@@ -119,12 +113,6 @@ export class Graph {
      * @param edge_type: The edge type.
      */
     public addEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
-        if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.')
-        }
         if (node0 === node1) {
             throw new Error('Nodes cannot be the same.')
         }
@@ -168,12 +156,6 @@ export class Graph {
      * @returns: True if the edge exists, false otherwise.
      */
     public hasEdge(node0: string, node1: string, edge_type: string, ssid: number = null): boolean {
-        if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
         // get edges
@@ -194,12 +176,6 @@ export class Graph {
      * @returns: True if the edge exists, false otherwise.
      */
      public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
-        if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
         // get edges
@@ -250,12 +226,6 @@ export class Graph {
      * @returns: A list of nodes names.
      */
     public successors(node: string, edge_type: string, ssid: number = null): string[] {
-        if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.')
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // get successors
@@ -277,12 +247,6 @@ export class Graph {
      * @returns: A list of nodes names, or a single node name.
      */
     public predecessors(node: string, edge_type: string, ssid: number = null): string[] {
-        if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // get predecessors
@@ -302,12 +266,6 @@ export class Graph {
      * @returns: An integer, the number of incoming edges.
      */
     public degreeIn(node: string, edge_type: string, ssid: number = null): number {
-        if (!this._nodes .has(node)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // calc reverse degree
@@ -327,12 +285,6 @@ export class Graph {
      * @returns: An integer, the number of outgoing edges.
      */
     public degreeOut(node: string, edge_type: string, ssid: number = null): number {
-        if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
-        }
-        if (!this._edge_types.has(edge_type)) {
-            throw new Error('Edge type does not exist.');
-        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid;}
         // calc forward degree
