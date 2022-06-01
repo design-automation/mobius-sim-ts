@@ -1,4 +1,4 @@
-import { Graph } from './graph';
+import { Graph, X2X } from './graph';
 
 test('Add and has nodes and edges', () => {
     const gr: Graph = new Graph();
@@ -53,7 +53,6 @@ test('Get edges', () => {
     expect(gr.degreeIn('aa', 'edge_x')).toBe(0);
 });
 
-
 test('Node props', () => {
     const gr: Graph = new Graph();
     gr.addNode('aa');
@@ -65,4 +64,51 @@ test('Node props', () => {
     expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeFalsy();
     gr.addEdge('aa', 'bb', 'edge_x');
     expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeTruthy();
+});
+
+test('Create snapshots', () => {
+    const gr: Graph = new Graph();
+    gr.addNode('aa');
+    gr.addNode('bb');
+    gr.addEdgeType('edge_x');
+    gr.addEdge('aa', 'bb', 'edge_x');
+    const ssid0 = gr.getActiveSnapshot();
+    const ssid1 = gr.newSnapshot(ssid0);
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid0)).toBeTruthy();
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid1)).toBeTruthy();
+    gr.delEdge('aa', 'bb', 'edge_x');
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid0)).toBeTruthy();
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid1)).toBeFalsy();
+});
+
+test('Merge snapshots', () => {
+    const gr: Graph = new Graph();
+    gr.addNode('aa');
+    gr.addNode('bb');
+    gr.addNode('cc');
+    gr.addEdgeType('edge_x');
+    gr.addEdge('aa', 'bb', 'edge_x');
+    const ssid0 = gr.getActiveSnapshot();
+    const ssid1 = gr.newSnapshot();
+    gr.addEdge('aa', 'cc', 'edge_x');
+    const ssid2 = gr.newSnapshot(ssid0);
+    gr.snapshotAddEdges('edge_x', ssid1);
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid2)).toBeTruthy();
+    expect(gr.hasEdge('aa', 'cc', 'edge_x', ssid2)).toBeTruthy();
+    gr.delEdge('aa', 'bb', 'edge_x');
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid0)).toBeTruthy();
+    expect(gr.hasEdge('aa', 'cc', 'edge_x', ssid1)).toBeTruthy();
+    expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid1)).toBeFalsy();
+    expect(gr.hasEdge('aa', 'cc', 'edge_x', ssid0)).toBeFalsy();
+});
+
+test('x2x', () => {
+    const gr: Graph = new Graph();
+    gr.addNode('aa');
+    gr.addNode('bb');
+    gr.addNode('cc');
+    gr.addNode('dd');
+    gr.addEdgeType('edge_x', X2X.O2O);
+    gr.addEdge('aa', 'bb', 'edge_x');
+    expect(() => gr.addEdge('aa', 'cc', 'edge_x')).toThrow();
 });

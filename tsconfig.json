@@ -2,13 +2,14 @@
   "compileOnSave": false,
   "compilerOptions": {
     "downlevelIteration": true,
-    "outDir": "./build",
+    "outDir": "./dist",
     "sourceMap": true,
     "declaration": false,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "target": "es2019",
+    "types": ["node", "jest"],
     "skipLibCheck": true,
     "paths": {
       "@assets/*" : ["src/assets/*"],
@@ -27,7 +28,7 @@
   },
   "exclude": [
     "**/*.test.ts",
-    "build",
+    "dist",
     "node_modules"
   ],
   "include" : [

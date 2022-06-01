@@ -4,6 +4,12 @@ type TGraphEdges = Map<string, Set<string>>;
 type TGraphFREdges = Map<number, TGraphEdges>;
 type TGraphEdgeTypes = Map<string, TGraphFREdges>;
 type TGraphSnapshots = Map<number, TGraphEdgeTypes>;
+export enum X2X {
+    O2O,
+    O2M,
+    M2O,
+    M2M
+}
 // Graph class
 export class Graph {
     // The graph is created using a Map of nodes and nested Maps of edges.
@@ -13,7 +19,7 @@ export class Graph {
     private static FWD: number = 0;
     private static REV: number = 1;
     private _nodes: Map<string, object>;
-    private _edge_types: Map<string, number>;
+    private _edge_types: Map<string, X2X>;
     private _edges: TGraphSnapshots;
     private _curr_ssid: number;
     /**
@@ -113,7 +119,7 @@ export class Graph {
      * @param edge_type: The edge type.
      */
     public addEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
-        if (!this._nodes.has(node0) && this._nodes.has(node1)) {
+        if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
             throw new Error('Node does not exist.');
         }
         if (!this._edge_types.has(edge_type)) {
@@ -125,16 +131,29 @@ export class Graph {
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
         // get edges
-        const edges = this._edges.get(ssid).get(edge_type);
+        let edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
+        if (edges === undefined) {
+            edges = new Map();
+            edges.set(Graph.FWD, new Map());
+            edges.set(Graph.REV, new Map());
+            this._edges.get(ssid).set(edge_type, edges);
+        }
+        const x2x: X2X = this._edge_types.get(edge_type);
         // add fwd edge from n0 to n1
         if (edges.get(Graph.FWD).has(node0)) {
             edges.get(Graph.FWD).get(node0).add( node1 );
+            if (x2x === X2X.O2O || x2x === X2X.M2O && edges.get(Graph.FWD).get(node0).size > 1) {
+                throw new Error('Edge type only allows one end node.');
+            }
         } else {
             edges.get(Graph.FWD).set(node0, new Set([node1]));
         }
         // add rev edge from n1 to n0
         if (edges.get(Graph.REV).has(node1)) {
             edges.get(Graph.REV).get(node1).add( node0 );
+            if (x2x === X2X.O2O || x2x === X2X.O2M && edges.get(Graph.FWD).get(node0).size > 1) {
+                throw new Error('Edge type only allows one end node.');
+            }
         } else {
             edges.get(Graph.REV).set(node1, new Set([node0]));
         }
@@ -157,12 +176,13 @@ export class Graph {
         }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
+        // get edges
+        const edges = this._edges.get(ssid).get(edge_type);
         // check if edge exists 
-        const edges_fwd = this._edges.get(ssid).get(edge_type).get(Graph.FWD);
-        if (!edges_fwd.has(node0)) {
+        if (edges === undefined || !edges.get(Graph.FWD).has(node0)) {
             return false;
         }
-        return edges_fwd.get(node0).has(node1);
+        return edges.get(Graph.FWD).get(node0).has(node1);
     }
     // ----------------------------------------------------------------------------------------------
     /**
@@ -185,7 +205,7 @@ export class Graph {
         // get edges
         const edges = this._edges.get(ssid).get(edge_type);
         // del fwd edge from n0 to n1
-        if (!edges.get(Graph.FWD).has(node0)) {
+        if (edges === undefined || !edges.get(Graph.FWD).has(node0)) {
             throw new Error('Edge does not exist.');
         }
         const deleted: boolean = edges.get(Graph.FWD).get(node0).delete(node1);
@@ -193,18 +213,18 @@ export class Graph {
             throw new Error('Edge does not exist.');
         }
         // del rev edge from n1 to n0
-        edges.get(Graph.REV).get(node1).delete(node0);
+        edges.get(Graph.REV).get(node1).delete(node0); // this may result in emtpy set
     }
     // ----------------------------------------------------------------------------------------------
     /**
      * Add an edge type to the graph.
      * @param edge_type: The edge type.
      */
-    public addEdgeType(edge_type: string): void {
+    public addEdgeType(edge_type: string, x2x: X2X = X2X.M2M): void {
         if (this._edge_types.has(edge_type)) {
             throw new Error('Edge type already exists.')
         }
-        this._edge_types.set(edge_type, this._curr_ssid);
+        this._edge_types.set(edge_type, x2x);
         this._edges.get(this._curr_ssid).set(edge_type, new Map());
         this._edges.get(this._curr_ssid).get(edge_type).set(Graph.FWD, new Map());
         this._edges.get(this._curr_ssid).get(edge_type).set(Graph.REV, new Map());
@@ -335,22 +355,84 @@ export class Graph {
     // ----------------------------------------------------------------------------------------------
     /**
      * Start a new snapshot of the edges in the graph.
-     * If `init` is null, the the new snapshot will ne initialised with the current snapshot.
-     * @param init: A list of existing snapshot IDS to intialise the new snapshot.
-     * @returns An integer, the ssid of the current snapshot.
+     * If `ssid` is null, the the new snapshot will be empty.
+     * @param ssid: A snapshot ID to intialise the new snapshot.
+     * @returns An integer, the ssid of the new snapshot.
      */
-    public newSnapshot(init: number|number[] = null): number {
-        if (init === null) {
-            init = this._curr_ssid;
-        } 
-        if (!Array.isArray(init)) {
+    public newSnapshot(ssid: number = null): number {
+        if (ssid === null) {
+            // create a new empty snapshot
             this._curr_ssid += 1;
-            this._edges.set(this._curr_ssid, cloneDeep(this._edges.get(init)));
+            this._edges.set(this._curr_ssid, new Map());
+            return this._curr_ssid;
+        } else {
+            // create a copy of the existing snapshot
+            this._curr_ssid += 1;
+            this._edges.set(this._curr_ssid, cloneDeep(this._edges.get(ssid)));
             return this._curr_ssid;
         }
-        this._curr_ssid += 1;
-        this._edges.set(this._curr_ssid, cloneDeep(this._edges.get(init[0]))); // TODO
-        return this._curr_ssid;
+    }
+    // ----------------------------------------------------------------------------------------------
+    /**
+     * Get the ID of the current active snapshot.
+     * @param edge_type 
+     * @param ssid 
+     * @param check 
+     */
+    public snapshotAddEdges(edge_type: string, ssid: number): void {
+        const x2x: X2X = this._edge_types.get(edge_type);
+        if (!this._edges.get(this._curr_ssid).has(edge_type)) {
+            const new_fr_edges: TGraphFREdges = new Map();
+            new_fr_edges.set(Graph.FWD, new Map());
+            new_fr_edges.set(Graph.REV, new Map());
+            this._edges.get(this._curr_ssid).set(edge_type, new_fr_edges);
+        }
+        // get the existing and new edges maps
+        const exist_fr_edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
+        const new_fr_edges: TGraphFREdges = this._edges.get(this._curr_ssid).get(edge_type);
+        // copy the edges over
+        for (const fwd_rev of [Graph.FWD, Graph.REV]) {
+            for (const [start_node, end_nodes_set] of exist_fr_edges.get(fwd_rev)) {
+                if (new_fr_edges.get(fwd_rev).has(start_node)) {
+                    const new_end_nodes_set: Set<string> = new_fr_edges.get(fwd_rev).get(start_node);
+                    for (const end_node of end_nodes_set) {
+                        new_end_nodes_set.add(end_node);
+                        // clash detection
+                        const size = new_end_nodes_set.size;
+                        if (x2x === X2X.O2O && size > 1) {
+                            throw new Error('Clash detected: Edge type is one-to-one');
+                        } else if (fwd_rev === Graph.FWD && x2x === X2X.M2O && size > 1) {
+                            throw new Error('Clash detected: Edge type is many-to-one.');
+                        } else if (fwd_rev === Graph.REV &&  x2x === X2X.O2M && size > 1) {
+                            throw new Error('Clash detected: Edge type is one-to-many.');
+                        }
+                    }
+                } else {
+                    new_fr_edges.get(fwd_rev).set(start_node, cloneDeep(end_nodes_set));
+                }
+            }
+        }
+    }
+    // ----------------------------------------------------------------------------------------------
+    /**
+     * Get the ID of the current active snapshot.
+     * @returns An integer, the ssid of the active snapshot.
+     */
+    public getActiveSnapshot(): number {
+         return this._curr_ssid;
+    }
+    // ----------------------------------------------------------------------------------------------
+    /**
+     * Set the ID of the current active snapshot.
+     * If teh snapshot ID does not exist, an error will be thrown.
+     * @param ssid: The ID of an existing spanshot.
+     * @returns An integer, the ssid of the active snapshot.
+     */
+    public setActiveSnapshot(ssid: number): void {
+        if (!this._edges.has(ssid)) {
+            throw new Error('Snapshot ID does not exist.');
+        }
+        this._curr_ssid = ssid;
     }
 }
 // ==================================================================================================

@@ -31,3 +31,6 @@ In `package.json`:
         "test": "jest"
     },
 ```
+
+See also
+https://swizec.com/blog/how-to-configure-jest-with-typescript/
