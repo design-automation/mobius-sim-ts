@@ -92,7 +92,7 @@ test('Merge snapshots', () => {
     const ssid1 = gr.newSnapshot();
     gr.addEdge('aa', 'cc', 'edge_x');
     const ssid2 = gr.newSnapshot(ssid0);
-    gr.snapshotAddEdges('edge_x', ssid1);
+    gr.snapshotCopyEdges('edge_x', ssid1);
     expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid2)).toBeTruthy();
     expect(gr.hasEdge('aa', 'cc', 'edge_x', ssid2)).toBeTruthy();
     gr.delEdge('aa', 'bb', 'edge_x');
