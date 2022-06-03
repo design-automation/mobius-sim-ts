@@ -19,10 +19,11 @@ export class Graph {
     //
     private static FWD: number = 0;
     private static REV: number = 1;
-    private _nodes: Map<string, object>;
+    private _nodes: Map<string, Map<string, any>>;
     private _edge_types: Map<string, X2X>;
     private _edges: TGraphSnapshots;
     private _curr_ssid: number;
+    // ---------------------------------------------------------------------------------------------
     /**
      * CONSTRUCTOR
      */
@@ -41,35 +42,69 @@ export class Graph {
         this._edges.set(0, new Map());
         this._curr_ssid = 0
     }
-    // ==============================================================================================
+    // =============================================================================================
     // METHODS
-    // ==============================================================================================
+    // =============================================================================================
     /**
      * Add a node to the graph. Throws an error if the node already exists.
      * @param node: The name of the node, a string.
-     * @param props: node properties, a dictionary of key-value pairs.
      */
-    public addNode(node: string, props: object = null): void {
+    public addNode(node: string): void {
         if (this._nodes.has(node)) {
             throw new Error('Node already exists.');
         }
-        this._nodes.set(node, props);
+        this._nodes.set(node, null);
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Get the properties of a node in the graph. Throws an error is the node does not exist.
+     * Set a property of a node . Throws an error is the node does not exist.
      * @param node: The name of the node, a string. 
-     * @returns: A dictionary of node properties.
+     * @param prop_name: The name of the property, a string. 
+     * @param prop_val: The value of the property, of type 'any'. 
+     * @returns: Void
      */
-    public getNodeProps(node: string): object {
+     public setNodeProp(node: string, prop_name: string, prop_val: any): void {
         if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node + '.');
         }
-        const props = this._nodes.get(node);
-        if (props === null) { return {}; }
-        return props;
+        let props: Map<string, any> = this._nodes.get(node);
+        if (props === null) { 
+            props = new Map();
+            this._nodes.set(node, props);
+        }
+        props.set(prop_name, prop_val);
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Get the value of a node property. Throws an error is the node does not exist.
+     * Throws an error is the property does not exist.
+     * @param node: The name of the node, a string. 
+     * @param prop_name: The name of the property, a string. 
+     * @returns: The value of a node property.
+     */
+    public getNodeProp(node: string, prop_name: string): any {
+        if (!this._nodes.has(node)) {
+            throw new Error('Node does not exist: ' + node + '.');
+        }
+        const props: Map<string, any> = this._nodes.get(node);
+        if (props === null || !props.has(prop_name)) { 
+            throw new Error('Property does not exist.');
+        }
+        return props.get(prop_name);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Get the names of all the node properties. Throws an error is the node does not exist.
+     * @param node: The name of the node, a string. 
+     * @returns: A list of node property names.
+     */
+     public getNodePropNames(node: string): string[] {
+        if (!this._nodes.has(node)) {
+            throw new Error('Node does not exist: ' + node + '.');
+        }
+        return Array.from(this._nodes.get(node).keys());
+    }
+    // ---------------------------------------------------------------------------------------------
     /**
      * Get a list of nodes that have an outgoing edge of type edge_type.
      * @param edge_type: The edge type.
@@ -83,7 +118,7 @@ export class Graph {
         const edges_fwd = this._edges.get(ssid).get(edge_type).get(Graph.FWD);
         return Array.from(edges_fwd.keys());
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Get a list of nodes that have an incoming edge of type edge_type.
      * @param edge_type: The edge type.
@@ -97,16 +132,16 @@ export class Graph {
         const edges_rev = this._edges.get(ssid).get(edge_type).get(Graph.REV);
         return Array.from(edges_rev.keys());
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Return true if the node node exists in the graph.
+     * Return true if the node node exists.
      * @param node: The name of the node, a string.
      * @returns : True if the node exists, false otherwise.
      */
     public hasNode(node: string): boolean {
         return this._nodes.has(node);
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Add an edge to the graph, from node 0 to node 1.
      * @param node0: The name of the start node.
@@ -115,7 +150,7 @@ export class Graph {
      */
     public addEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
         if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node0 + ', ' + node1 + '.');
         }
         if (node0 === node1) {
             throw new Error('Nodes cannot be the same.')
@@ -153,9 +188,9 @@ export class Graph {
             edges.get(Graph.REV).set(node1, new Set([node0]));
         }
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Return true if an edge from n0 to n1 exists in the graph.
+     * Return true if an edge from n0 to n1 exists .
      * @param node0: The name of the start node.
      * @param node1: The name of the end node.
      * @param edge_type: The edge type.
@@ -164,7 +199,7 @@ export class Graph {
      */
     public hasEdge(node0: string, node1: string, edge_type: string, ssid: number = null): boolean {
         if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node0 + ', ' + node1 + '.');
         }
         if (!this._edge_types.has(edge_type)) {
             throw new Error('Edge type does not exist.')
@@ -179,9 +214,9 @@ export class Graph {
         }
         return edges.get(Graph.FWD).get(node0).has(node1);
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Delete the edge from n0 to n1 in the graph.
+     * Delete the edge from n0 to n1 .
      * @param node0: The name of the start node.
      * @param node1: The name of the end node.
      * @param edge_type: The edge type.
@@ -190,7 +225,7 @@ export class Graph {
      */
      public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
         if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node0 + ', ' + node1 + '.');
         }
         if (!this._edge_types.has(edge_type)) {
             throw new Error('Edge type does not exist.')
@@ -210,7 +245,7 @@ export class Graph {
         // del rev edge from n1 to n0
         edges.get(Graph.REV).get(node1).delete(node0); // this may result in emtpy set
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Add an edge type to the graph.
      * @param edge_type: The edge type.
@@ -220,19 +255,20 @@ export class Graph {
             throw new Error('Edge type already exists.')
         }
         this._edge_types.set(edge_type, x2x);
+        // TODO add option for reverse edges
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Return true if the edge type exists in the graph.
+     * Return true if the edge type exists .
      * @param edge_type: The edge type.
      * @returns: True if the edge type exists, false otherwise.
      */
     public hasEdgeType(edge_type: string): boolean {
         return this._edge_types.has(edge_type);
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Get multiple successors of a node in the graph.
+     * Get multiple successors of a node .
      * The node 'n' is linked to each successor by a forward edge of type 'edge_type'.
      * If there are no successors, then an empty list is returned.
      * If the edge type ends in 'o' (i.e. 'm2o' or 'o2o'), then an error is thrown.
@@ -243,7 +279,7 @@ export class Graph {
      */
     public successors(node: string, edge_type: string, ssid: number = null): string[] {
         if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node + '.');
         }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
@@ -254,9 +290,9 @@ export class Graph {
         }
         return Array.from(edges_fwd.get(node));
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Get multiple predecessors of a node in the graph.
+     * Get multiple predecessors of a node .
      * The node 'n' is linked to each predecessor by a reverse edge of type 'edge_type'.
      * If there are no predecessors, then an empty list is returned.
      * If the edge type starts with 'o' (i.e. 'o2o' or 'o2m'), then an error is thrown.
@@ -267,7 +303,7 @@ export class Graph {
      */
     public predecessors(node: string, edge_type: string, ssid: number = null): string[] {
         if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node + '.');
         }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
@@ -278,7 +314,7 @@ export class Graph {
         }
         return Array.from(edges_rev.get(node));
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Count the the number of incoming edges.
      * The 'in degree' is the number of reverse edges of type 'ent_type' linked to node 'n'.
@@ -289,7 +325,7 @@ export class Graph {
      */
     public degreeIn(node: string, edge_type: string, ssid: number = null): number {
         if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node + '.');
         }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
@@ -300,7 +336,7 @@ export class Graph {
         }
         return edges_rev.get(node).size;
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Count the the number of outgoing edges.
      * The 'out degree' is the number of forward edges of type 'ent_type' linked to node 'n'.
@@ -311,7 +347,7 @@ export class Graph {
      */
     public degreeOut(node: string, edge_type: string, ssid: number = null): number {
         if (!this._nodes.has(node)) {
-            throw new Error('Node does not exist.');
+            throw new Error('Node does not exist: ' + node + '.');
         }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
@@ -322,7 +358,7 @@ export class Graph {
         }
         return edges_fwd.get(node).size;
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Count the the total number of incoming and outgoing edges.
      * @param node: The name of the node for which to count edges.
@@ -332,9 +368,9 @@ export class Graph {
     public degree(node: string, edge_type: string, ssid: number = null): number {
         return this.degreeIn(node, edge_type, ssid) + this.degreeOut(node, edge_type, ssid);
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
-     * Start a new snapshot of the edges in the graph.
+     * Start a new snapshot of the edges .
      * If `ssid` is null, the the new snapshot will be empty.
      * @param ssid: A snapshot ID to intialise the new snapshot.
      * @returns An integer, the ssid of the new snapshot.
@@ -350,7 +386,7 @@ export class Graph {
         }
         return this._curr_ssid;
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Copy a set of edges from another snapshot into the current active snapshot.
      * @param edge_type The type of edges to copy.
@@ -390,7 +426,7 @@ export class Graph {
             }
         }
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Get the ID of the current active snapshot.
      * @returns An integer, the ssid of the active snapshot.
@@ -398,7 +434,7 @@ export class Graph {
     public getActiveSnapshot(): number {
          return this._curr_ssid;
     }
-    // ----------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
     /**
      * Set the ID of the current active snapshot.
      * If teh snapshot ID does not exist, an error will be thrown.
@@ -412,6 +448,6 @@ export class Graph {
         this._curr_ssid = ssid;
     }
 }
-// ==================================================================================================
+// =================================================================================================
 // END GRAPH CLASS
-// ==================================================================================================
+// =================================================================================================

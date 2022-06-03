@@ -19,11 +19,13 @@ test('Add and has nodes and edges', () => {
 
 test('Node props', () => {
     const gr: Graph = new Graph();
-    gr.addNode('aa', {'p':123, 'q':[1,2,3], 'r':{'one':1, 'two': 2, 'three': 3}});
-    const result = gr.getNodeProps('aa');
-    expect(result['p']).toBe(123);
-    expect(result['q']).toEqual([1,2,3]);
-    expect(result['r']).toEqual({'one':1, 'two': 2, 'three': 3});
+    gr.addNode('aa');
+    gr.setNodeProp('aa', 'p', 123);
+    gr.setNodeProp('aa', 'q', [1,2,3]);
+    gr.setNodeProp('aa', 'r', {'one':1, 'two': 2, 'three': 3});
+    expect(gr.getNodeProp('aa', 'p')).toBe(123);
+    expect(gr.getNodeProp('aa', 'q')).toEqual([1,2,3]);
+    expect(gr.getNodeProp('aa', 'r')).toEqual({'one':1, 'two': 2, 'three': 3});
 });
 
 test('Get edges', () => {
