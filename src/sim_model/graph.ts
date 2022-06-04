@@ -5,6 +5,7 @@ type TGraphEdges2M = Map<string, Set<string>>;
 type TGraphFREdges = Map<number, TGraphEdges2M|TGraphEdges2O>;
 type TGraphEdgeTypes = Map<string, TGraphFREdges>;
 type TGraphSnapshots = Map<number, TGraphEdgeTypes>;
+type EdgeProps = {rel: X2X, rev: boolean}
 // Edge relationships
 export enum X2X {
     O2O, // one to one
@@ -14,16 +15,12 @@ export enum X2X {
 }
 // Graph class
 export class Graph {
-    // The graph is created using a Map of nodes and nested Maps of edges.
-    // 
-    // For each edge type, both forward and reverse are stored.
-    //
-    private static FWD: number = 0;
-    private static REV: number = 1;
-    private _nodes: Map<string, Map<string, any>>;
-    private _edge_types: Map<string, X2X>;
-    private _edges: TGraphSnapshots;
-    private _curr_ssid: number;
+    private static FWD: number = 0; // forward edges
+    private static REV: number = 1; // reverse edges
+    private _nodes: Map<string, Map<string, any>>; // the nodes in teh graph
+    private _edge_props: Map<string, EdgeProps>; // the properties for each type of edge
+    private _edges: TGraphSnapshots; // a nested datastructure to store edges
+    private _curr_ssid: number; // the current snapshot ID
     // ---------------------------------------------------------------------------------------------
     /**
      * CONSTRUCTOR
@@ -32,7 +29,7 @@ export class Graph {
         // nodes
         this._nodes = new Map(); // key is node name, value is Map of properties
         // edge_types, key is edge_type, value is the snapshot id
-        this._edge_types = new Map();
+        this._edge_props = new Map();
         // edges, nested dictionaries four levels deep
         // first level, key is the ssid, value is an Map
         // second level, key is the edge_type, value is an Map
@@ -159,7 +156,7 @@ export class Graph {
         if (node0 === node1) {
             throw new Error('Nodes cannot be the same.')
         }
-        if (!this._edge_types.has(edge_type)) {
+        if (!this._edge_props.has(edge_type)) {
             throw new Error('Edge type does not exist.')
         }
         // get ssid
@@ -172,40 +169,44 @@ export class Graph {
             edges.set(Graph.REV, new Map());
             this._edges.get(ssid).set(edge_type, edges);
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
-        // add rev edge from n1 to n0
-        if (x2x === X2X.O2O) {
-            this._addEdgeO2O(node0, node1, edges);
-        } else if (x2x === X2X.O2M) {
-            this._addEdgeO2M(node0, node1, edges);
-        } if (x2x === X2X.M2O) {
-            this._addEdgeM2O(node0, node1, edges);
-        } if (x2x === X2X.M2M) {
-            this._addEdgeM2M(node0, node1, edges);
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+        // add edge
+        if (rel === X2X.O2O) {
+            this._addEdgeO2O(node0, node1, edges, rev);
+        } else if (rel === X2X.O2M) {
+            this._addEdgeO2M(node0, node1, edges, rev);
+        } if (rel === X2X.M2O) {
+            this._addEdgeM2O(node0, node1, edges, rev);
+        } if (rel === X2X.M2M) {
+            this._addEdgeM2M(node0, node1, edges, rev);
         }
     }
-    private _addEdgeO2O(node0: string, node1: string, edges: TGraphFREdges): void {
+    private _addEdgeO2O(node0: string, node1: string, edges: TGraphFREdges, rev: boolean): void {
         // add rev edge from n1 to n0
-        const edge_rev: TGraphEdges2O = edges.get(Graph.REV) as TGraphEdges2O;
-        if (edges.get(Graph.FWD).has(node0)) {
-            // for O2O delete the old rev edge if it exists
-            const old_node1: string = edges.get(Graph.FWD).get(node0) as string;
-            edge_rev.delete(old_node1);
+        if (rev) {
+            const edge_rev: TGraphEdges2O = edges.get(Graph.REV) as TGraphEdges2O;
+            if (edges.get(Graph.FWD).has(node0)) {
+                // for O2O delete the old rev edge if it exists
+                const old_node1: string = edges.get(Graph.FWD).get(node0) as string;
+                edge_rev.delete(old_node1);
+            }
+            edge_rev.set(node1, node0);
         }
-        edge_rev.set(node1, node0);
         // add fwd edge from n0 to n1
         const edge_fwd: TGraphEdges2O = edges.get(Graph.FWD) as TGraphEdges2O;
         edge_fwd.set(node0, node1);
     }
-    private _addEdgeO2M(node0: string, node1: string, edges: TGraphFREdges): void {
+    private _addEdgeO2M(node0: string, node1: string, edges: TGraphFREdges, rev: boolean): void {
         // add rev edge from n1 to n0
-        const edge_rev: TGraphEdges2O = edges.get(Graph.REV) as TGraphEdges2O;
-        if (edges.get(Graph.REV).has(node1)) {
-            const old_node0: string = edges.get(Graph.REV).get(node1) as string;
-            const nodes1_set: Set<string> = edges.get(Graph.FWD).get(old_node0) as Set<string>;
-            nodes1_set.delete(node1);
+        if (rev) {
+            const edge_rev: TGraphEdges2O = edges.get(Graph.REV) as TGraphEdges2O;
+            if (edges.get(Graph.REV).has(node1)) {
+                const old_node0: string = edges.get(Graph.REV).get(node1) as string;
+                const nodes1_set: Set<string> = edges.get(Graph.FWD).get(old_node0) as Set<string>;
+                nodes1_set.delete(node1);
+            }
+            edge_rev.set(node1, node0);
         }
-        edge_rev.set(node1, node0);
         // add fwd edge from n0 to n1
         const edge_fwd: TGraphEdges2M = edges.get(Graph.FWD) as TGraphEdges2M;
         if (edge_fwd.has(node0)) {
@@ -214,30 +215,34 @@ export class Graph {
             edge_fwd.set(node0, new Set([node1]));
         }
     }
-    private _addEdgeM2O(node0: string, node1: string, edges: TGraphFREdges): void {
+    private _addEdgeM2O(node0: string, node1: string, edges: TGraphFREdges, rev: boolean): void {
         // add rev edge from n1 to n0
-        const edge_rev: TGraphEdges2M = edges.get(Graph.REV) as TGraphEdges2M;
-        if (edges.get(Graph.FWD).has(node0)) {
-            const old_node1: string = edges.get(Graph.FWD).get(node0) as string;
-            const nodes0_set: Set<string> = edges.get(Graph.REV).get(old_node1) as Set<string>;
-            nodes0_set.delete(node0);
-        }
-        if (edge_rev.has(node1)) {
-            edge_rev.get(node1).add( node0 );
-        } else {
-            edge_rev.set(node1, new Set([node0]));
+        if (rev) {
+            const edge_rev: TGraphEdges2M = edges.get(Graph.REV) as TGraphEdges2M;
+            if (edges.get(Graph.FWD).has(node0)) {
+                const old_node1: string = edges.get(Graph.FWD).get(node0) as string;
+                const nodes0_set: Set<string> = edges.get(Graph.REV).get(old_node1) as Set<string>;
+                nodes0_set.delete(node0);
+            }
+            if (edge_rev.has(node1)) {
+                edge_rev.get(node1).add( node0 );
+            } else {
+                edge_rev.set(node1, new Set([node0]));
+            }
         }
         // add fwd edge from n0 to n1
         const edge_fwd: TGraphEdges2O = edges.get(Graph.FWD) as TGraphEdges2O;
         edge_fwd.set(node0, node1);
     }
-    private _addEdgeM2M(node0: string, node1: string, edges: TGraphFREdges): void {
+    private _addEdgeM2M(node0: string, node1: string, edges: TGraphFREdges, rev: boolean): void {
         // add rev edge from n1 to n0
-        const edge_rev: TGraphEdges2M = edges.get(Graph.REV) as TGraphEdges2M;
-        if (edge_rev.has(node1)) {
-            edge_rev.get(node1).add( node0 );
-        } else {
-            edge_rev.set(node1, new Set([node0]));
+        if (rev) {
+            const edge_rev: TGraphEdges2M = edges.get(Graph.REV) as TGraphEdges2M;
+            if (edge_rev.has(node1)) {
+                edge_rev.get(node1).add( node0 );
+            } else {
+                edge_rev.set(node1, new Set([node0]));
+            }
         }
         // add fwd edge from n0 to n1
         const edge_fwd: TGraphEdges2M = edges.get(Graph.FWD) as TGraphEdges2M;
@@ -260,7 +265,7 @@ export class Graph {
         if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
             throw new Error('Node does not exist: ' + node0 + ', ' + node1 + '.');
         }
-        if (!this._edge_types.has(edge_type)) {
+        if (!this._edge_props.has(edge_type)) {
             throw new Error('Edge type does not exist.')
         }
         // get ssid
@@ -271,9 +276,9 @@ export class Graph {
         if (!edges.get(Graph.FWD).has(node0)) {
             throw new Error('Edge does not exist.');
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
         // del fwd edge from n0 to n1
-        if (x2x === X2X.O2O || x2x === X2X.M2O) {
+        if (rel === X2X.O2O || rel === X2X.M2O) {
             (edges.get(Graph.FWD) as TGraphEdges2O).delete(node0);
         } else {
             const deleted: boolean = (edges.get(Graph.FWD) as TGraphEdges2M).get(node0).delete(node1); 
@@ -283,13 +288,15 @@ export class Graph {
             }
         }
         // del rev edge from n1 to n0
-        if (x2x === X2X.O2O || x2x === X2X.O2M) {
-            (edges.get(Graph.REV) as TGraphEdges2O).delete(node1);
-        } else {
-            const deleted: boolean = (edges.get(Graph.REV) as TGraphEdges2M).get(node1).delete(node0);
-            // this may result in emtpy set
-            if (!deleted) {
-                throw new Error('Edge does not exist.');
+        if (rev) {
+            if (rel === X2X.O2O || rel === X2X.O2M) {
+                (edges.get(Graph.REV) as TGraphEdges2O).delete(node1);
+            } else {
+                const deleted: boolean = (edges.get(Graph.REV) as TGraphEdges2M).get(node1).delete(node0);
+                // this may result in emtpy set
+                if (!deleted) {
+                    throw new Error('Edge does not exist.');
+                }
             }
         }
     }
@@ -306,7 +313,7 @@ export class Graph {
         if (!this._nodes.has(node0) || !this._nodes.has(node1)) {
             throw new Error('Node does not exist: ' + node0 + ', ' + node1 + '.');
         }
-        if (!this._edge_types.has(edge_type)) {
+        if (!this._edge_props.has(edge_type)) {
             throw new Error('Edge type does not exist.')
         }
         // get ssid
@@ -317,8 +324,8 @@ export class Graph {
         if (edges === undefined || !edges.get(Graph.FWD).has(node0)) {
             return false;
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
-        if (x2x === X2X.O2O || x2x === X2X.M2O) {
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+        if (rel === X2X.O2O || rel === X2X.M2O) {
             return (edges.get(Graph.FWD) as TGraphEdges2O).get(node0) === node1;
         } else {
             return (edges.get(Graph.FWD) as TGraphEdges2M).get(node0).has(node1);
@@ -331,11 +338,11 @@ export class Graph {
      * @param edge_type: The edge type.
      * @param x2x: Edge relationship, O2O, O2M, M2O, M2M
      */
-    public addEdgeType(edge_type: string, x2x: X2X = X2X.M2M): void {
-        if (this._edge_types.has(edge_type)) {
+    public addEdgeType(edge_type: string, x2x: X2X = X2X.M2M, reverse: boolean = true): void {
+        if (this._edge_props.has(edge_type)) {
             throw new Error('Edge type already exists.')
         }
-        this._edge_types.set(edge_type, x2x);
+        this._edge_props.set(edge_type, {rel: x2x, rev: reverse} );
         // TODO add option to enable/disable reverse edges
     }
     // ---------------------------------------------------------------------------------------------
@@ -345,7 +352,7 @@ export class Graph {
      * @returns: True if the edge type exists, false otherwise.
      */
     public hasEdgeType(edge_type: string): boolean {
-        return this._edge_types.has(edge_type);
+        return this._edge_props.has(edge_type);
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -369,8 +376,8 @@ export class Graph {
         if (!edges_fwd.has(node)) {
             return [];
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
-        if (x2x === X2X.O2O || x2x === X2X.M2O) {
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+        if (rel === X2X.O2O || rel === X2X.M2O) {
             return [(edges_fwd as TGraphEdges2O).get(node)];
         } else {
             return Array.from((edges_fwd as TGraphEdges2M).get(node));
@@ -391,6 +398,10 @@ export class Graph {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist: ' + node + '.');
         }
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+        if (!rev) {
+            throw new Error('Edge type has no reverse edges.');
+        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
         // get predecessors
@@ -398,8 +409,8 @@ export class Graph {
         if (!edges_rev.has(node)) {
             return [];
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
-        if (x2x === X2X.O2O || x2x === X2X.O2M) {
+        
+        if (rel === X2X.O2O || rel === X2X.O2M) {
             return [(edges_rev as TGraphEdges2O).get(node)];
         } else {
             return Array.from((edges_rev as TGraphEdges2M).get(node));
@@ -418,6 +429,10 @@ export class Graph {
         if (!this._nodes.has(node)) {
             throw new Error('Node does not exist: ' + node + '.');
         }
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+        if (!rev) {
+            throw new Error('Edge type has no reverse edges.');
+        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
         // calc reverse degree
@@ -425,8 +440,7 @@ export class Graph {
         if (!edges_rev.has(node)) {
             return 0;
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
-        if (x2x === X2X.O2O || x2x === X2X.O2M) {
+        if (rel === X2X.O2O || rel === X2X.O2M) {
             return 1;
         } else {
             return (edges_rev as TGraphEdges2M).get(node).size;
@@ -452,8 +466,8 @@ export class Graph {
         if (!edges_fwd.has(node)) {
             return 0;
         }
-        const x2x: X2X = this._edge_types.get(edge_type);
-        if (x2x === X2X.O2O || x2x === X2X.M2O) {
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+        if (rel === X2X.O2O || rel === X2X.M2O) {
             return 1;
         } else {
             return (edges_fwd as TGraphEdges2M).get(node).size;
@@ -494,7 +508,7 @@ export class Graph {
      * @param ssid The snapshot ID to copy from.
      */
     public snapshotCopyEdges(edge_type: string, ssid: number): void {
-        const x2x: X2X = this._edge_types.get(edge_type);
+        const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
         if (!this._edges.get(this._curr_ssid).has(edge_type)) {
             const new_fr_edges: TGraphFREdges = new Map();
             new_fr_edges.set(Graph.FWD, new Map());
@@ -504,7 +518,7 @@ export class Graph {
         // copy forward edges
         let other_edges_fwd = this._edges.get(ssid).get(edge_type).get(Graph.FWD);
         let curr_edges_fwd = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.FWD);
-        if (x2x === X2X.O2O || x2x === X2X.M2O) {
+        if (rel === X2X.O2O || rel === X2X.M2O) {
             other_edges_fwd = other_edges_fwd as TGraphEdges2O;
             curr_edges_fwd = curr_edges_fwd as TGraphEdges2O;
             for (const [other_start_node, other_end_node] of other_edges_fwd) {
@@ -530,29 +544,31 @@ export class Graph {
             }
         }
         // copy reverse edges
-        let other_edges_rev = this._edges.get(ssid).get(edge_type).get(Graph.REV);
-        let curr_edges_rev = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV);
-        if (x2x === X2X.O2O || x2x === X2X.O2M) {
-            other_edges_rev = other_edges_rev as TGraphEdges2O;
-            curr_edges_rev = curr_edges_rev as TGraphEdges2O;
-            for (const [other_node0, other_node1] of other_edges_rev) {
-                if (curr_edges_rev.has(other_node0) && curr_edges_rev.get(other_node0) !== other_node1) {
-                    throw new Error('Clash detected: Values are different.');
-                } else {
-                    curr_edges_rev.set(other_node0, other_node1);
-                }
-            }
-        } else {
-            other_edges_rev = other_edges_rev as TGraphEdges2M;
-            curr_edges_rev = curr_edges_rev as TGraphEdges2M;
-            for (const [other_node0, other_nodes1_set] of other_edges_rev) {
-                if (curr_edges_rev.has(other_node0)) {
-                    const curr_nodes1_set: Set<string> = curr_edges_rev.get(other_node0);
-                    for (const other_node1 of other_nodes1_set) {
-                        curr_nodes1_set.add(other_node1);
+        if (rev) {
+            let other_edges_rev = this._edges.get(ssid).get(edge_type).get(Graph.REV);
+            let curr_edges_rev = this._edges.get(this._curr_ssid).get(edge_type).get(Graph.REV);
+            if (rel === X2X.O2O || rel === X2X.O2M) {
+                other_edges_rev = other_edges_rev as TGraphEdges2O;
+                curr_edges_rev = curr_edges_rev as TGraphEdges2O;
+                for (const [other_node0, other_node1] of other_edges_rev) {
+                    if (curr_edges_rev.has(other_node0) && curr_edges_rev.get(other_node0) !== other_node1) {
+                        throw new Error('Clash detected: Values are different.');
+                    } else {
+                        curr_edges_rev.set(other_node0, other_node1);
                     }
-                } else {
-                    curr_edges_rev.set(other_node0, cloneDeep(other_nodes1_set));
+                }
+            } else {
+                other_edges_rev = other_edges_rev as TGraphEdges2M;
+                curr_edges_rev = curr_edges_rev as TGraphEdges2M;
+                for (const [other_node0, other_nodes1_set] of other_edges_rev) {
+                    if (curr_edges_rev.has(other_node0)) {
+                        const curr_nodes1_set: Set<string> = curr_edges_rev.get(other_node0);
+                        for (const other_node1 of other_nodes1_set) {
+                            curr_nodes1_set.add(other_node1);
+                        }
+                    } else {
+                        curr_edges_rev.set(other_node0, cloneDeep(other_nodes1_set));
+                    }
                 }
             }
         }
@@ -588,7 +604,8 @@ export class Graph {
         for (const [ssid, edge_types_map] of this._edges) {
             info += 'SSID = ' + ssid + '\n';
             for (const [edge_type, fr_edges_map] of edge_types_map) {
-                info += '    EDGE TYPE = ' + edge_type + ', ' + X2X[this._edge_types.get(edge_type)] + '\n';
+                const { rel, rev }: EdgeProps = this._edge_props.get(edge_type);
+                info += '    EDGE TYPE = ' + edge_type + ', ' + X2X[rel] + ', reverse = ' + rev + '\n';
                 for (const [start, end] of fr_edges_map.get(Graph.FWD)) {
                     info += '      FWD EDGE: ' + start + ' -> ';
                     if (end instanceof Set) {

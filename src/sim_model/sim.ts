@@ -130,7 +130,7 @@ export class Sim {
         this.graph = new Graph();
         this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ENTITY, X2X.M2M); // many to many
         this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ATTRIB, X2X.M2O); // many to one
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.META, X2X.O2M); // one to many
+        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.META, X2X.O2M, false); // one to many
         // create nodes for ents and attribs
         for (const ent_type of 
                 [ENT_TYPE.POSIS, ENT_TYPE.VERTS, ENT_TYPE.EDGES, ENT_TYPE.WIRES, 
