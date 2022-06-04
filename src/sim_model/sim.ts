@@ -38,7 +38,7 @@ export type TAttribDataTypes = string | number | boolean | any[] | object;
 export type Txyz = [number, number, number];
 // -------------------------------------------------------------------------------------------------
 enum _GRAPH_EDGE_TYPE {
-    ENT = 'entity',
+    ENTITY = 'entity',
     ATTRIB =  'attrib',
     META = 'meta'
 }
@@ -128,7 +128,7 @@ export class Sim {
     constructor() {
         // graph
         this.graph = new Graph();
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ENT, X2X.M2M); // many to many
+        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ENTITY, X2X.M2M); // many to many
         this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ATTRIB, X2X.M2O); // many to one
         this.graph.addEdgeType(_GRAPH_EDGE_TYPE.META, X2X.O2M); // one to many
         // create nodes for ents and attribs
@@ -348,47 +348,52 @@ export class Sim {
     public addPoint(posi: string): string {
         const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
         const point: string = this._graphAddEnt(ENT_TYPE.POINTS);
-        this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENT);
-        this.graph.addEdge(point, vert, _GRAPH_EDGE_TYPE.ENT);
+        this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
+        this.graph.addEdge(point, vert, _GRAPH_EDGE_TYPE.ENTITY);
         return point;
     }
     // ---------------------------------------------------------------------------------------------
     /**
      * Add a polyline object to the model, specifying a list of positions.
      * @param posis A list of position IDs.
-     * @param closed A boolean indicating if the polyline is closed or open.
      * @returns The ID of the new polyline.
      */
-    public addPline(posis: string[], closed: boolean): string {
+    public addPline(posis: string[]): string {
+        if (posis.length < 2) {
+            throw new Error('Too few positions for polyline.');
+        }
+        const closed: boolean = posis[0] === posis[posis.length - 1];
         // vertices
+        const num_verts: number = closed ? posis.length - 1 : posis.length;
         const verts: string[] = [];
-        for(const posi of posis) {
+        for(let i = 0; i < num_verts; i++) {
+            const posi: string = posis[i];
             const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
-            this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
             verts.push(vert);
         }
         // edges
         const edges: string[] = [];
         for (let i = 0; i < verts.length - 1; i++) {
             const edge: string = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(edge, verts[i], _GRAPH_EDGE_TYPE.ENT);
-            this.graph.addEdge(edge, verts[i+1], _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(edge, verts[i], _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, verts[i+1], _GRAPH_EDGE_TYPE.ENTITY);
             edges.push(edge);
         }
         if (closed) {
             const edge: string = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(edge, verts[-1], _GRAPH_EDGE_TYPE.ENT);
-            this.graph.addEdge(edge, verts[0], _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(edge, verts[verts.length - 1], _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, verts[0], _GRAPH_EDGE_TYPE.ENTITY);
             edges.push(edge);
         }
         // wire
         const wire: string = this._graphAddEnt(ENT_TYPE.WIRES);
         for (let i = 0; i < edges.length; i++) {
-            this.graph.addEdge(wire, edges[i], _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(wire, edges[i], _GRAPH_EDGE_TYPE.ENTITY);
         }
         // pline
         const pline: string = this._graphAddEnt(ENT_TYPE.PLINES);
-        this.graph.addEdge(pline, wire, _GRAPH_EDGE_TYPE.ENT);
+        this.graph.addEdge(pline, wire, _GRAPH_EDGE_TYPE.ENTITY);
         //  return
         return pline;
     }
@@ -399,11 +404,14 @@ export class Sim {
      * @returns The ID of the new polygon.
      */
     public addPgon(posis: string[]): string {
+        if (posis.length < 3) {
+            throw new Error('Too few positions for polygon.');
+        }
         // vertices
         const verts: string[] = [];
         for (const posi of posis) {
             const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
-            this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
             verts.push(vert);
         }
         verts.push(verts[0]);
@@ -413,18 +421,18 @@ export class Sim {
             const v0 = verts[i];
             const v1 = verts[i+1];
             const edge = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(edge, v0, _GRAPH_EDGE_TYPE.ENT);
-            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(edge, v0, _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENTITY);
             edges.push(edge);
         }
         // wire
         const wire = this._graphAddEnt(ENT_TYPE.WIRES);
         for (let i = 0; i < edges.length; i++) {
-            this.graph.addEdge(wire, edges[i], _GRAPH_EDGE_TYPE.ENT);
+            this.graph.addEdge(wire, edges[i], _GRAPH_EDGE_TYPE.ENTITY);
         }
         // pline
         const pgon = this._graphAddEnt(ENT_TYPE.PGONS);
-        this.graph.addEdge(pgon, wire, _GRAPH_EDGE_TYPE.ENT);
+        this.graph.addEdge(pgon, wire, _GRAPH_EDGE_TYPE.ENTITY);
         //  return
         return pgon;
     }
@@ -449,7 +457,7 @@ export class Sim {
         if (!_COLL_ENT_TYPES.includes(ent_type)) {
             throw new Error('Invalid entitiy for collections.');
         }
-        this.graph.addEdge(coll, ent, _GRAPH_EDGE_TYPE.ENT);
+        this.graph.addEdge(coll, ent, _GRAPH_EDGE_TYPE.ENTITY);
     }
     // =============================================================================================
     // ATTRIBUTE METHODS
@@ -638,10 +646,10 @@ export class Sim {
         }
         const dist: number = ent_seq[source_ent_type] - ent_seq[target_ent_type]
         if (dist === 1) {
-            return this.graph.successors(source_ent, _GRAPH_EDGE_TYPE.ENT);
+            return this.graph.successors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
         }
         if (dist === -1) {
-            return this.graph.predecessors(source_ent, _GRAPH_EDGE_TYPE.ENT);
+            return this.graph.predecessors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
         }
         let ents: string[] = [source_ent];
         const target_ents_set: Set<string> = new Set();
@@ -649,8 +657,8 @@ export class Sim {
             const ent_set: Set<string> = new Set();
             for (const ent of ents) {
                 const target_ents: string[] = dist > 0 ? 
-                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT) : 
-                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENT);
+                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
+                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
                 for (const target_ent of target_ents) {
                     const this_ent_type: ENT_TYPE = this.graph.getNodeProp(target_ent, 'ent_type');
                     if (this_ent_type === target_ent_type) {
@@ -739,42 +747,42 @@ export class Sim {
         if ( ent_type === ENT_TYPE.POSIS ) {
             return ent;
         } else if ( ent_type === ENT_TYPE.VERTS) {
-            return this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT)[0];
+            return this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0];
         } else if ( ent_type === ENT_TYPE.EDGES ) {
-            const verts: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT);
-            return verts.map(vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENT)[0]);
+            const verts: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY);
+            return verts.map(vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
         } else if ( ent_type === ENT_TYPE.WIRES) {
-            const edges: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT)
+            const edges: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)
             const verts: string[] = edges.map(
-                edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENT)[0]);
+                edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
             const posis: string[] = verts.map(
-                vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENT)[0]);
-            const last_vert: string = this.graph.successors(edges[-1], _GRAPH_EDGE_TYPE.ENT)[1];
-            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENT)[0];
+                vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
+            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1];
+            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
             posis.push(last_posi);
             return posis;
         } else if ( ent_type === ENT_TYPE.POINTS ) {
-            const vert: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT)[0];
-            return this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENT)[0];
+            const vert: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0];
+            return this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
         } else if ( ent_type === ENT_TYPE.PLINES ) {
-            const wire: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT)[0]
-            const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENT)
+            const wire: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0]
+            const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENTITY)
             const verts: string[] = edges.map( 
-                edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENT)[0]);
+                edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
             const wire_posis: string[] = verts.map( 
-                vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENT)[0]);
-            const last_vert: string = this.graph.successors(edges[-1], _GRAPH_EDGE_TYPE.ENT)[1];
-            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENT)[0];
+                vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
+            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1];
+            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
             wire_posis.push(last_posi);
             return wire_posis;
         } else if ( ent_type === ENT_TYPE.PGONS ) {
             const posis: string[][] = [];
-            for (const wire of this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENT)) {
-                const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENT);
+            for (const wire of this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)) {
+                const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENTITY);
                 const verts: string[] = edges.map( 
-                    edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENT)[0]);
+                    edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
                 const wire_posis: string[] = verts.map( 
-                    vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENT)[0]);
+                    vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
                 posis.push(wire_posis);
             }
             return posis;
@@ -829,11 +837,11 @@ export class Sim {
      */
     public isPlineClosed(pline: string): boolean { 
         const edges: string[] = this.graph.successors(
-            this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENT)[0], _GRAPH_EDGE_TYPE.ENT);
+            this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY);
         const start: string = this.graph.successors(
-            this.graph.successors(edges[0], _GRAPH_EDGE_TYPE.ENT)[0], _GRAPH_EDGE_TYPE.ENT)[0];
+            this.graph.successors(edges[0], _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY)[0];
         const end: string = this.graph.successors(
-            this.graph.successors(edges[-1], _GRAPH_EDGE_TYPE.ENT)[1], _GRAPH_EDGE_TYPE.ENT)[0];
+            this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1], _GRAPH_EDGE_TYPE.ENTITY)[0];
         return start === end;
     }
     // ---------------------------------------------------------------------------------------------
@@ -898,7 +906,7 @@ export class Sim {
             for (const ent of this.graph.successors(
                 _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
-                if (val !== null && this.graph.getNodeProp(val, 'value') < att_val) {
+                if (val !== undefined && this.graph.getNodeProp(val, 'value') < att_val) {
                     result.push(ent)
                 }
             }
@@ -908,7 +916,7 @@ export class Sim {
             for (const ent of this.graph.successors(
                 _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
-                if (val !== null && this.graph.getNodeProp(val, 'value') <= att_val) {
+                if (val !== undefined && this.graph.getNodeProp(val, 'value') <= att_val) {
                     result.push(ent);
                 }
             }
@@ -918,7 +926,7 @@ export class Sim {
             for (const ent of this.graph.successors(
                 _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
-                if (val !== null && this.graph.getNodeProp(val, 'value') > att_val) {
+                if (val !== undefined && this.graph.getNodeProp(val, 'value') > att_val) {
                     result.push(ent);
                 }
             }
@@ -928,7 +936,7 @@ export class Sim {
             for (const ent of this.graph.successors(
                 _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
-                if (val !== null && this.graph.getNodeProp(val, 'value') >= att_val) {
+                if (val !== undefined && this.graph.getNodeProp(val, 'value') >= att_val) {
                     result.push(ent);
                 }
             }

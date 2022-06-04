@@ -15,6 +15,7 @@ test('Add and has nodes and edges', () => {
     expect(gr.hasEdge('bb', 'aa', 'edge_x')).toBeFalsy();
     expect(() => gr.hasEdge('aa', 'cc', 'edge_x')).toThrow();
     expect(() => gr.hasEdge('aa', 'bb', 'edge_y')).toThrow();
+    // expect(gr.toString()).toEqual(['dummy']);
 });
 
 test('Node props', () => {
@@ -26,6 +27,7 @@ test('Node props', () => {
     expect(gr.getNodeProp('aa', 'p')).toBe(123);
     expect(gr.getNodeProp('aa', 'q')).toEqual([1,2,3]);
     expect(gr.getNodeProp('aa', 'r')).toEqual({'one':1, 'two': 2, 'three': 3});
+    // expect(gr.toString()).toEqual(['dummy']);
 });
 
 test('Get edges', () => {
@@ -53,6 +55,7 @@ test('Get edges', () => {
     expect(gr.degree('dd', 'edge_x')).toBe(2);
     expect(gr.degreeOut('aa', 'edge_x')).toBe(2);
     expect(gr.degreeIn('aa', 'edge_x')).toBe(0);
+    // expect(gr.toString()).toEqual(['dummy']);
 });
 
 test('Node props', () => {
@@ -66,6 +69,7 @@ test('Node props', () => {
     expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeFalsy();
     gr.addEdge('aa', 'bb', 'edge_x');
     expect(gr.hasEdge('aa', 'bb', 'edge_x')).toBeTruthy();
+    // expect(gr.toString()).toEqual(['dummy']);
 });
 
 test('Create snapshots', () => {
@@ -81,6 +85,7 @@ test('Create snapshots', () => {
     gr.delEdge('aa', 'bb', 'edge_x');
     expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid0)).toBeTruthy();
     expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid1)).toBeFalsy();
+    // expect(gr.toString()).toEqual(['dummy']);
 });
 
 test('Merge snapshots', () => {
@@ -102,9 +107,10 @@ test('Merge snapshots', () => {
     expect(gr.hasEdge('aa', 'cc', 'edge_x', ssid1)).toBeTruthy();
     expect(gr.hasEdge('aa', 'bb', 'edge_x', ssid1)).toBeFalsy();
     expect(gr.hasEdge('aa', 'cc', 'edge_x', ssid0)).toBeFalsy();
+    // expect(gr.toString()).toEqual(['dummy']);
 });
 
-test('x2x', () => {
+test('Edges O2O', () => {
     const gr: Graph = new Graph();
     gr.addNode('aa');
     gr.addNode('bb');
@@ -112,5 +118,50 @@ test('x2x', () => {
     gr.addNode('dd');
     gr.addEdgeType('edge_x', X2X.O2O);
     gr.addEdge('aa', 'bb', 'edge_x');
-    expect(() => gr.addEdge('aa', 'cc', 'edge_x')).toThrow();
+    expect(gr.successors('aa','edge_x')).toEqual(['bb']);
+    expect(gr.predecessors('bb','edge_x')).toEqual(['aa']);
+    gr.addEdge('aa', 'cc', 'edge_x');
+    expect(gr.successors('aa','edge_x')).toEqual(['cc']);
+    expect(gr.predecessors('bb','edge_x')).toEqual([]);
+    expect(gr.predecessors('cc','edge_x')).toEqual(['aa']);
+    gr.delEdge('aa', 'cc', 'edge_x');
+    expect(gr.predecessors('cc','edge_x')).toEqual([]);
+    // expect(gr.toString()).toEqual(['dummy']);
+});
+
+test('Edges O2M', () => {
+    const gr: Graph = new Graph();
+    gr.addNode('aa');
+    gr.addNode('bb');
+    gr.addNode('cc');
+    gr.addNode('dd');
+    gr.addEdgeType('edge_x', X2X.O2M);
+    gr.addEdge('aa', 'bb', 'edge_x');
+    gr.addEdge('aa', 'cc', 'edge_x');
+    expect(gr.successors('aa','edge_x')).toEqual(['bb', 'cc']);
+    expect(gr.predecessors('bb','edge_x')).toEqual(['aa']);
+    gr.addEdge('dd', 'cc', 'edge_x');
+    gr.delEdge('aa', 'bb', 'edge_x');
+    expect(gr.successors('dd','edge_x')).toEqual(['cc']);
+    expect(gr.predecessors('cc','edge_x')).toEqual(['dd']);
+    // expect(gr.toString()).toEqual(['dummy']);
+});
+
+test('Edges M2O', () => {
+    const gr: Graph = new Graph();
+    gr.addNode('aa');
+    gr.addNode('bb');
+    gr.addNode('cc');
+    gr.addNode('dd');
+    gr.addEdgeType('edge_x', X2X.M2O);
+    gr.addEdge('aa', 'bb', 'edge_x');
+    gr.addEdge('cc', 'bb', 'edge_x');
+    expect(gr.successors('aa','edge_x')).toEqual(['bb']);
+    expect(gr.predecessors('bb','edge_x')).toEqual(['aa', 'cc']);
+    gr.addEdge('cc', 'dd', 'edge_x');
+    gr.delEdge('aa', 'bb', 'edge_x');
+    expect(gr.successors('cc','edge_x')).toEqual(['dd']);
+    expect(gr.predecessors('dd','edge_x')).toEqual(['cc']);
+    expect(gr.predecessors('bb','edge_x')).toEqual([]);
+    // expect(gr.toString()).toEqual(['dummy']);
 });
