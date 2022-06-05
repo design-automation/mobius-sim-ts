@@ -1,4 +1,4 @@
-import { Graph, X2X } from './graph';
+import { Graph } from './graph';
 // -------------------------------------------------------------------------------------------------
 // An Enum that defines a set of constants for different entity types. 
 // These types are used when adding an attribute to the model.
@@ -105,8 +105,7 @@ const _ENT_SEQ_COLL_PLINE_POSI: {[index: string]: number}  = {};
     _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.POSIS] = 0;
     _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.VERTS] = 1;
     _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.EDGES] = 2;
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.WIRES] = 3;
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.PLINES] = 4;
+    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.PLINES] = 3;
     _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.COLLS] = 6;
 // -------------------------------------------------------------------------------------------------
 const _ENT_SEQ_COLL_PGON_POSI: {[index: string]: number}  = {};
@@ -128,9 +127,9 @@ export class Sim {
     constructor() {
         // graph
         this.graph = new Graph();
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ENTITY, X2X.M2M); // many to many
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ATTRIB, X2X.M2O); // many to one
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.META, X2X.O2M); // one to many
+        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ENTITY); // many to many
+        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ATTRIB); // many to one
+        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.META, false); // one to many
         // create nodes for ents and attribs
         for (const ent_type of 
                 [ENT_TYPE.POSIS, ENT_TYPE.VERTS, ENT_TYPE.EDGES, ENT_TYPE.WIRES, 
@@ -142,36 +141,6 @@ export class Sim {
         this._graphAddAttrib(ENT_TYPE.POSIS, 'xyz', DATA_TYPE.LIST);
         // add empty model attrbutes map
         this.model_attribs = new Map();
-    }
-    // =============================================================================================
-    // METHODS
-    // =============================================================================================
-    // =============================================================================================
-    // UTILITY 
-    // =============================================================================================
-    /**
-     * Given a value, return a DATA_TYPE string.
-     * @param value 
-     * @returns 
-     */
-    private _check_type(value: any): DATA_TYPE {
-        const val_type = typeof(value);
-        if (val_type === 'number') {
-            return DATA_TYPE.NUM;
-        }
-        if (val_type === 'string') {
-            return DATA_TYPE.STR;
-        }
-        if (val_type === 'boolean') {
-            return DATA_TYPE.BOOL;
-        }
-        if (Array.isArray(value)) {
-            return DATA_TYPE.LIST;
-        }
-        if (val_type === 'object') { // TODO check this
-            return DATA_TYPE.DICT;
-        }
-        throw new Error('Data type is not recognised:' + value + ' ' + typeof(value));
     }
     // =============================================================================================
     // PRIVATE GRAPH METHODS
@@ -269,12 +238,10 @@ export class Sim {
         // create the node name, from prefix and then next count number
         const ent_i: number = this.graph.degreeOut(ent_type_node, _GRAPH_EDGE_TYPE.META);
         const ent: string = _ENT_PREFIX[ent_type] + ent_i;
-        // add a node with name `n`
+        // add a node with name `ent`
         this.graph.addNode(ent);
         this.graph.setNodeProp(ent, 'ent_type', ent_type); // the type of entity, `posi`, `vert`, etc
-        // create an edge from the node `ent_type` to the new node
-        // the new edge is given the attribute `meta`
-        // this edge is so that later the node can be found
+        // create an edge from the `ent_type` to the new ent
         this.graph.addEdge(ent_type_node, ent, _GRAPH_EDGE_TYPE.META);
         // return the name of the new entity node
         return ent;
@@ -300,31 +267,9 @@ export class Sim {
         // the edge type is `meta`
         this.graph.addEdge(_GRAPH_ATTRIBS_NODE[ent_type], att, _GRAPH_EDGE_TYPE.META);
         // create a new edge type for this attrib
-        this.graph.addEdgeType(att, X2X.M2O); // many to one
+        this.graph.addEdgeType(att); // many to one
         // return the name of the new attrib node
         return att;
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Add an attribute value node to the graph.
-     * @param att The attribute node name.
-     * @param att_val The value of the attribute.
-     * @returns 
-     */
-     private _graphAddAttribVal(att: string, att_val: TAttribDataTypes) {
-        // get the name of the attribute value node
-        const att_val_node: string|number = this._graphAttribValNodeName(att_val);
-        // make sure that no node with the name already exists
-        if (!this.graph.hasNode(att_val_node)) {
-            // add the attrib value node
-            // the new node has 1 property
-            this.graph.addNode(att_val_node);
-            this.graph.setNodeProp(att_val_node, 'value', att_val);
-            // add an edge from the attrib value to the attrib
-            this.graph.addEdge(att_val_node, att, _GRAPH_EDGE_TYPE.ATTRIB); // att_val -> att
-        }
-        // return the name of the attrib value node
-        return att_val_node;
     }
     // =============================================================================================
     // ADD METHODS FOR ENTITIES
@@ -364,36 +309,28 @@ export class Sim {
         }
         const closed: boolean = posis[0] === posis[posis.length - 1];
         // vertices
-        const num_verts: number = closed ? posis.length - 1 : posis.length;
+        const num_posis: number = closed ? posis.length - 1 : posis.length;
         const verts: string[] = [];
-        for(let i = 0; i < num_verts; i++) {
+        for(let i = 0; i < num_posis; i++) {
             const posi: string = posis[i];
             const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
             this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
             verts.push(vert);
         }
+        if (closed) { verts.push(verts[0]); }
         // edges
         const edges: string[] = [];
         for (let i = 0; i < verts.length - 1; i++) {
             const edge: string = this._graphAddEnt(ENT_TYPE.EDGES);
             this.graph.addEdge(edge, verts[i], _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, verts[i+1], _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, verts[i + 1], _GRAPH_EDGE_TYPE.ENTITY);
             edges.push(edge);
-        }
-        if (closed) {
-            const edge: string = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(edge, verts[verts.length - 1], _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, verts[0], _GRAPH_EDGE_TYPE.ENTITY);
-            edges.push(edge);
-        }
-        // wire
-        const wire: string = this._graphAddEnt(ENT_TYPE.WIRES);
-        for (let i = 0; i < edges.length; i++) {
-            this.graph.addEdge(wire, edges[i], _GRAPH_EDGE_TYPE.ENTITY);
         }
         // pline
         const pline: string = this._graphAddEnt(ENT_TYPE.PLINES);
-        this.graph.addEdge(pline, wire, _GRAPH_EDGE_TYPE.ENTITY);
+        for (let i = 0; i < edges.length; i++) {
+            this.graph.addEdge(pline, edges[i], _GRAPH_EDGE_TYPE.ENTITY);
+        }
         //  return
         return pline;
     }
@@ -510,7 +447,6 @@ export class Sim {
      */
     public setAttribVal(ent: string, att_name: string, att_value: TAttribDataTypes): void {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
-        // TODO check what happens when teh same value is assigned to different things
         // e.g. 123 is assied to both a posi and a pgon
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         if (ent_type !== this.graph.getNodeProp(att, 'ent_type')) {
@@ -522,8 +458,19 @@ export class Sim {
             'The data type is a "' + data_type + '". ' + 
             'The data type should be a "' + this.graph.getNodeProp(att, 'data_type') + '".' );
         }
-        const att_val: string = this._graphAddAttribVal(att, att_value);
-        this.graph.addEdge(ent, att_val, att); // ent -> att_val;
+        // get the name of the attribute value node
+        const att_val_node: string|number = this._graphAttribValNodeName(att_value);
+        // make sure that no node with the name already exists
+        if (!this.graph.hasNode(att_val_node)) {
+            // add the attrib value node
+            this.graph.addNode(att_val_node);
+            this.graph.setNodeProp(att_val_node, 'value', att_value);
+        }
+        // add an edge from the att_val_node to the attrib
+        this.graph.addEdge(att_val_node, att, _GRAPH_EDGE_TYPE.ATTRIB); // att_val -> att
+        // add and edge from the ent to the att_val_node
+        this.graph.delEdge(ent, null, att);
+        this.graph.addEdge(ent, att_val_node, att); // ent -> att_val; ent <- att_val;
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -753,42 +700,35 @@ export class Sim {
             return verts.map(vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
         } else if ( ent_type === ENT_TYPE.WIRES) {
             const edges: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)
-            const verts: string[] = edges.map(
-                edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-            const posis: string[] = verts.map(
-                vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1];
-            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
-            posis.push(last_posi);
-            return posis;
+            return this._getEdgeSeqPosis(edges, false);
         } else if ( ent_type === ENT_TYPE.POINTS ) {
             const vert: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0];
             return this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
         } else if ( ent_type === ENT_TYPE.PLINES ) {
-            const wire: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0]
-            const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENTITY)
-            const verts: string[] = edges.map( 
-                edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-            const wire_posis: string[] = verts.map( 
-                vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1];
-            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
-            wire_posis.push(last_posi);
-            return wire_posis;
+            const edges: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)
+            return this._getEdgeSeqPosis(edges, true);
         } else if ( ent_type === ENT_TYPE.PGONS ) {
             const posis: string[][] = [];
             for (const wire of this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)) {
                 const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENTITY);
-                const verts: string[] = edges.map( 
-                    edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-                const wire_posis: string[] = verts.map( 
-                    vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-                posis.push(wire_posis);
+                posis.push(this._getEdgeSeqPosis(edges, false));
             }
             return posis;
         } else if ( ent_type === ENT_TYPE.COLLS ) {
             throw new Error('Not implemented'); // TODO
         }
+    }
+    private _getEdgeSeqPosis(edges: string[], add_last: boolean): string[] {
+        const verts: string[] = edges.map( 
+            edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
+        const posis: string[] = verts.map( 
+            vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
+        if (add_last) {
+            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1];
+            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
+            posis.push(last_posi);
+        }
+        return posis;
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -836,13 +776,12 @@ export class Sim {
      * @returns True if closed, false if open.
      */
     public isPlineClosed(pline: string): boolean { 
-        const edges: string[] = this.graph.successors(
-            this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY);
-        const start: string = this.graph.successors(
+        const edges: string[] = this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENTITY);
+        const start_posi: string = this.graph.successors(
             this.graph.successors(edges[0], _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY)[0];
-        const end: string = this.graph.successors(
+        const end_posi: string = this.graph.successors(
             this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1], _GRAPH_EDGE_TYPE.ENTITY)[0];
-        return start === end;
+        return start_posi === end_posi;
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -944,6 +883,41 @@ export class Sim {
         // return list of entities
         // TODO handle queries sub-entities in lists and dicts
         return result;
+    }
+    // =============================================================================================
+    // UTILITY 
+    // =============================================================================================
+    /**
+     * Given a value, return a DATA_TYPE string.
+     * @param value 
+     * @returns 
+     */
+     private _check_type(value: any): DATA_TYPE {
+        const val_type = typeof(value);
+        if (val_type === 'number') {
+            return DATA_TYPE.NUM;
+        }
+        if (val_type === 'string') {
+            return DATA_TYPE.STR;
+        }
+        if (val_type === 'boolean') {
+            return DATA_TYPE.BOOL;
+        }
+        if (Array.isArray(value)) {
+            return DATA_TYPE.LIST;
+        }
+        if (val_type === 'object') { // TODO check this
+            return DATA_TYPE.DICT;
+        }
+        throw new Error('Data type is not recognised:' + value + ' ' + typeof(value));
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Creates a human-readable string representation of the graph, for debugging.
+     * @returns A string representation of the graph.
+     */
+    public toString(): string {
+        return this.graph.toString();
     }
     // ---------------------------------------------------------------------------------------------
 }

@@ -21,13 +21,13 @@ test('Basic entity creation.', () => {
     expect(sim.getEnts(ENT_TYPE.COLLS)).toEqual(['co0']);
     expect(sim.getEnts(ENT_TYPE.VERTS)).toEqual(['_v0', '_v1', '_v2', '_v3', '_v4', '_v5']);
     expect(sim.getEnts(ENT_TYPE.EDGES)).toEqual(['_e0', '_e1', '_e2', '_e3']);
-    expect(sim.getEnts(ENT_TYPE.WIRES)).toEqual(['_w0', '_w1']);
+    expect(sim.getEnts(ENT_TYPE.WIRES)).toEqual(['_w0']);
     expect(sim.getEnts(ENT_TYPE.POINTS, coll)).toEqual(['pt0']);
     expect(sim.getEnts(ENT_TYPE.PLINES, coll)).toEqual(['pl0']);
     expect(sim.getEnts(ENT_TYPE.PGONS, coll)).toEqual(['pg0']);
     expect(sim.getEnts(ENT_TYPE.VERTS, p0)).toEqual(['_v1', '_v3']);
     expect(sim.getEnts(ENT_TYPE.EDGES, p0)).toEqual(['_e0', '_e1', '_e3']);
-    expect(sim.getEnts(ENT_TYPE.WIRES, p0)).toEqual(['_w0', '_w1']);
+    expect(sim.getEnts(ENT_TYPE.WIRES, p0)).toEqual(['_w0']);
     expect(sim.getEnts(ENT_TYPE.POINTS, p0)).toEqual([]);
     expect(sim.getEnts(ENT_TYPE.PLINES, p0)).toEqual(['pl0']);
     expect(sim.getEnts(ENT_TYPE.PGONS, p0)).toEqual(['pg0']);
@@ -35,7 +35,7 @@ test('Basic entity creation.', () => {
     expect(sim.numEnts(ENT_TYPE.POSIS)).toBe(3);
     expect(sim.numEnts(ENT_TYPE.VERTS)).toBe(6);
     expect(sim.numEnts(ENT_TYPE.EDGES)).toBe(4);
-    expect(sim.numEnts(ENT_TYPE.WIRES)).toBe(2);
+    expect(sim.numEnts(ENT_TYPE.WIRES)).toBe(1);
     expect(sim.numEnts(ENT_TYPE.POINTS)).toBe(1);
     expect(sim.numEnts(ENT_TYPE.PLINES)).toBe(1);
     expect(sim.numEnts(ENT_TYPE.PGONS)).toBe(1);
@@ -134,3 +134,39 @@ test('Queries with numbers.', () => {
     expect(sim.query(ENT_TYPE.POSIS, 'aa', COMPARATOR.IS_LESS_OR_EQUAL, 10)).toEqual(['ps0', 'ps1']);
     expect(() => sim.setAttribVal(p1, 'aa', 'hello')).toThrow();
 });
+
+test('Multi attribs same name', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([1,2,3]);
+    const pt0 = sim.addPoint(p0);
+    sim.addAttrib(ENT_TYPE.POSIS, 'msg', DATA_TYPE.STR);
+    sim.addAttrib(ENT_TYPE.POINTS, 'msg', DATA_TYPE.STR);
+    sim.setAttribVal(p0, 'msg', 'hello');
+    sim.setAttribVal(pt0, 'msg', 'hello');
+    expect(sim.getAttribs(ENT_TYPE.POSIS)).toEqual(['xyz', 'msg']);
+    expect(sim.getAttribs(ENT_TYPE.POINTS)).toEqual(['msg']);
+    expect(sim.getAttribVals(ENT_TYPE.POSIS, 'msg')).toEqual(['hello']);
+    expect(sim.getAttribVals(ENT_TYPE.POINTS, 'msg')).toEqual(['hello']);
+    // expect(sim.toString()).toEqual(['dummy']);
+});
+
+test('Polyline with duplicate positions.', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([-10, 10, 0]);
+    const p1 = sim.addPosi([-10, -10, 0]);
+    const p2 = sim.addPosi([0, 0, 0]);
+    const p3 = sim.addPosi([10, 10, 0]);
+    const p4 = sim.addPosi([10, -10, 0]);
+    const pline = sim.addPline( [p0, p1, p2, p3, p4, p2, p0] );
+    expect(sim.getEntPosis(pline)).toEqual(['ps0', 'ps1', 'ps2', 'ps3', 'ps4', 'ps2', 'ps0']);
+});
+
+
+// test('xxx', () => {
+//     const sim: Sim = new Sim();
+//     sim.addAttrib(ENT_TYPE.POINTS, 'msg', DATA_TYPE.STR);
+//     const p0 = sim.addPosi([1,2,3]);
+//     const pt0 = sim.addPoint(p0);
+//     sim.setAttribVal(pt0, 'msg', 'hello');
+//     expect(sim.toString()).toEqual(['dummy']);
+// });
