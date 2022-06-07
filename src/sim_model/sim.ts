@@ -1,17 +1,19 @@
 import { Graph } from './graph';
-// -------------------------------------------------------------------------------------------------
+// =================================================================================================
+// ENUMS
+// =================================================================================================
 // An Enum that defines a set of constants for different entity types. 
 // These types are used when adding an attribute to the model.
 export enum ENT_TYPE {
-    POSIS = 'posis',
-    VERTS = 'verts',
-    EDGES = 'edges',
-    WIRES = 'wires',
-    POINTS = 'points',
-    PLINES = 'plines',
-    PGONS = 'pgons',
-    COLLS = 'colls',
-    MODEL = 'model'
+    POSIS = 'ps',
+    VERTS = '_v',
+    EDGES = '_e',
+    WIRES = '_w',
+    POINTS = 'pt',
+    PLINES = 'pl',
+    PGONS = 'pg',
+    COLLS = 'co',
+    MODEL = 'mo'
 }
 // -------------------------------------------------------------------------------------------------
 // An Enum that defines a set of constants for possible data types for attributes. 
@@ -34,47 +36,79 @@ export enum COMPARATOR {
     IS_LESS = '<'
 }
 // -------------------------------------------------------------------------------------------------
-export type TAttribDataTypes = string | number | boolean | any[] | object;
-export type Txyz = [number, number, number];
-// -------------------------------------------------------------------------------------------------
 enum _GRAPH_EDGE_TYPE {
     ENTITY = 'entity',
     ATTRIB =  'attrib',
     META = 'meta'
 }
+// =================================================================================================
+// TYPES
+// =================================================================================================
+export type TAttribDataTypes = string | number | boolean | any[] | object;
+export type Txyz = [number, number, number];
+export type TEntSets = Map<ENT_TYPE, string[]>;
+// =================================================================================================
+// MAPS
+// =================================================================================================
+// node names for meta ents
+const _GRAPH_ENTS_NODE: Map<string, string> = new Map([
+    [ENT_TYPE.POSIS, '_ents_posis'],
+    [ENT_TYPE.VERTS, '_ents_verts'],
+    [ENT_TYPE.EDGES, '_ents_edges'],
+    [ENT_TYPE.WIRES, '_ents_wires'],
+    [ENT_TYPE.POINTS, '_ents_points'],
+    [ENT_TYPE.PLINES, '_ents_plines'],
+    [ENT_TYPE.PGONS, '_ents_pgons'],
+    [ENT_TYPE.COLLS, '_ents_colls']
+]);
 // -------------------------------------------------------------------------------------------------
-// 
-const _GRAPH_ENTS_NODE: {[index: string]: string}  = {};
-    _GRAPH_ENTS_NODE[ENT_TYPE.POSIS] = '_ents_posis';
-    _GRAPH_ENTS_NODE[ENT_TYPE.VERTS] = '_ents_verts';
-    _GRAPH_ENTS_NODE[ENT_TYPE.EDGES] = '_ents_edges';
-    _GRAPH_ENTS_NODE[ENT_TYPE.WIRES] = '_ents_wires';
-    _GRAPH_ENTS_NODE[ENT_TYPE.POINTS] = '_ents_points';
-    _GRAPH_ENTS_NODE[ENT_TYPE.PLINES] = '_ents_plines';
-    _GRAPH_ENTS_NODE[ENT_TYPE.PGONS] = '_ents_pgons';
-    _GRAPH_ENTS_NODE[ENT_TYPE.COLLS] = '_ents_colls';
+// node names for meta attribs
+const _GRAPH_ATTRIBS_NODE: Map<string, string> = new Map([
+    [ENT_TYPE.POSIS, '_atts_posis'],
+    [ENT_TYPE.VERTS, '_atts_verts'],
+    [ENT_TYPE.EDGES, '_atts_edges'],
+    [ENT_TYPE.WIRES, '_atts_wires'],
+    [ENT_TYPE.POINTS, '_atts_points'],
+    [ENT_TYPE.PLINES, '_atts_plines'],
+    [ENT_TYPE.PGONS, '_atts_pgons'],
+    [ENT_TYPE.COLLS, '_atts_colls']
+]);
 // -------------------------------------------------------------------------------------------------
-// node in the graph that links to all attribs
-const _GRAPH_ATTRIBS_NODE: {[index: string]: string} = {};
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.POSIS] = '_atts_posis';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.VERTS] = '_atts_verts';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.EDGES] = '_atts_edges';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.WIRES] = '_atts_wires';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.POINTS] = '_atts_points';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.PLINES] = '_atts_plines';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.PGONS] = '_atts_pgons';
-    _GRAPH_ATTRIBS_NODE[ENT_TYPE.COLLS] = '_atts_colls';
+// ENT SEQUENCES FOR QUERES
+const _ENT_SEQ: Map<string, number> = new Map([
+    [ENT_TYPE.POSIS, 0], 
+    [ENT_TYPE.VERTS, 1], 
+    [ENT_TYPE.EDGES, 2], 
+    [ENT_TYPE.WIRES, 3], 
+    [ENT_TYPE.POINTS, 4], 
+    [ENT_TYPE.PLINES, 4], 
+    [ENT_TYPE.PGONS, 4], 
+    [ENT_TYPE.COLLS, 6]
+]);
 // -------------------------------------------------------------------------------------------------
-// ENT PREFIX
-const _ENT_PREFIX: {[index: string]: string} = {};
-    _ENT_PREFIX[ENT_TYPE.POSIS] =  'ps';
-    _ENT_PREFIX[ENT_TYPE.VERTS] =  '_v';
-    _ENT_PREFIX[ENT_TYPE.EDGES] =  '_e';
-    _ENT_PREFIX[ENT_TYPE.WIRES] =  '_w';
-    _ENT_PREFIX[ENT_TYPE.POINTS] = 'pt';
-    _ENT_PREFIX[ENT_TYPE.PLINES] = 'pl';
-    _ENT_PREFIX[ENT_TYPE.PGONS] =  'pg';
-    _ENT_PREFIX[ENT_TYPE.COLLS] =  'co';
+const _ENT_SEQ_COLL_POINT_POSI: Map<string, number> = new Map([
+    [ENT_TYPE.POSIS, 0],
+    [ENT_TYPE.VERTS, 1],
+    [ENT_TYPE.POINTS, 2],
+    [ENT_TYPE.COLLS, 6]
+]);
+// -------------------------------------------------------------------------------------------------
+const _ENT_SEQ_COLL_PLINE_POSI: Map<string, number> = new Map([
+    [ENT_TYPE.POSIS, 0], 
+    [ENT_TYPE.VERTS, 1], 
+    [ENT_TYPE.EDGES, 2], 
+    [ENT_TYPE.PLINES, 3], 
+    [ENT_TYPE.COLLS, 6]
+]);
+// -------------------------------------------------------------------------------------------------
+const _ENT_SEQ_COLL_PGON_POSI: Map<string, number> = new Map([
+     [ENT_TYPE.POSIS, 0],
+     [ENT_TYPE.VERTS, 1],
+     [ENT_TYPE.EDGES, 2],
+     [ENT_TYPE.WIRES, 3],
+     [ENT_TYPE.PGONS, 4],
+     [ENT_TYPE.COLLS, 6]
+]);
 // -------------------------------------------------------------------------------------------------
 // ENT_TYPES FOR COLLECTIONS
 const _COLL_ENT_TYPES: string[] = [
@@ -83,40 +117,9 @@ const _COLL_ENT_TYPES: string[] = [
     ENT_TYPE.PGONS, 
     ENT_TYPE.COLLS
 ]
-// -------------------------------------------------------------------------------------------------
-// ENT SEQUENCES FOR QUERES
-const _ENT_SEQ: {[index: string]: number} = {};
-    _ENT_SEQ[ENT_TYPE.POSIS] = 0;
-    _ENT_SEQ[ENT_TYPE.VERTS] = 1;
-    _ENT_SEQ[ENT_TYPE.EDGES] = 2;
-    _ENT_SEQ[ENT_TYPE.WIRES] = 3;
-    _ENT_SEQ[ENT_TYPE.POINTS] = 4;
-    _ENT_SEQ[ENT_TYPE.PLINES] = 4;
-    _ENT_SEQ[ENT_TYPE.PGONS] = 4;
-    _ENT_SEQ[ENT_TYPE.COLLS] = 6;
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_COLL_POINT_POSI: {[index: string]: number}  = {};
-    _ENT_SEQ_COLL_POINT_POSI[ENT_TYPE.POSIS] = 0;
-    _ENT_SEQ_COLL_POINT_POSI[ENT_TYPE.VERTS] = 1;
-    _ENT_SEQ_COLL_POINT_POSI[ENT_TYPE.POINTS] = 2;
-    _ENT_SEQ_COLL_POINT_POSI[ENT_TYPE.COLLS] = 6;
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_COLL_PLINE_POSI: {[index: string]: number}  = {};
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.POSIS] = 0;
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.VERTS] = 1;
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.EDGES] = 2;
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.PLINES] = 3;
-    _ENT_SEQ_COLL_PLINE_POSI[ENT_TYPE.COLLS] = 6;
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_COLL_PGON_POSI: {[index: string]: number}  = {};
-    _ENT_SEQ_COLL_PGON_POSI[ENT_TYPE.POSIS] = 0;
-    _ENT_SEQ_COLL_PGON_POSI[ENT_TYPE.VERTS] = 1;
-    _ENT_SEQ_COLL_PGON_POSI[ENT_TYPE.EDGES] = 2;
-    _ENT_SEQ_COLL_PGON_POSI[ENT_TYPE.WIRES] = 3;
-    _ENT_SEQ_COLL_PGON_POSI[ENT_TYPE.PGONS] = 4;
-    _ENT_SEQ_COLL_PGON_POSI[ENT_TYPE.COLLS] = 6;
-// -------------------------------------------------------------------------------------------------
-// Sim class
+// =================================================================================================
+// CLASS
+// =================================================================================================
 export class Sim {
     private graph: Graph;
     private model_attribs: Map<string, any>;
@@ -134,8 +137,8 @@ export class Sim {
         for (const ent_type of 
                 [ENT_TYPE.POSIS, ENT_TYPE.VERTS, ENT_TYPE.EDGES, ENT_TYPE.WIRES, 
                 ENT_TYPE.POINTS, ENT_TYPE.PLINES, ENT_TYPE.PGONS, ENT_TYPE.COLLS]) {
-            this.graph.addNode(_GRAPH_ENTS_NODE[ent_type]);
-            this.graph.addNode(_GRAPH_ATTRIBS_NODE[ent_type]);
+            this.graph.addNode(_GRAPH_ENTS_NODE.get(ent_type));
+            this.graph.addNode(_GRAPH_ATTRIBS_NODE.get(ent_type));
         }
         // add xyz attrib
         this._graphAddAttrib(ENT_TYPE.POSIS, 'xyz', DATA_TYPE.LIST);
@@ -234,10 +237,10 @@ export class Sim {
      * @returns 
      */
      private _graphAddEnt(ent_type: ENT_TYPE): string {
-        const ent_type_node: string = _GRAPH_ENTS_NODE[ent_type];
+        const ent_type_node: string = _GRAPH_ENTS_NODE.get(ent_type);
         // create the node name, from prefix and then next count number
         const ent_i: number = this.graph.degreeOut(ent_type_node, _GRAPH_EDGE_TYPE.META);
-        const ent: string = _ENT_PREFIX[ent_type] + ent_i;
+        const ent: string = ent_type + ent_i;
         // add a node with name `ent`
         this.graph.addNode(ent);
         this.graph.setNodeProp(ent, 'ent_type', ent_type); // the type of entity, `posi`, `vert`, etc
@@ -265,7 +268,7 @@ export class Sim {
         this.graph.setNodeProp(att, 'data_type', data_type); // the data type of this attribute
         // create an edge from the node `ent_type_attribs` (e.g. posis_attribs) to the new attrib node
         // the edge type is `meta`
-        this.graph.addEdge(_GRAPH_ATTRIBS_NODE[ent_type], att, _GRAPH_EDGE_TYPE.META);
+        this.graph.addEdge(_GRAPH_ATTRIBS_NODE.get(ent_type), att, _GRAPH_EDGE_TYPE.META);
         // create a new edge type for this attrib
         this.graph.addEdgeType(att); // many to one
         // return the name of the new attrib node
@@ -432,7 +435,7 @@ export class Sim {
      * @returns A list of attrib names.
      */
     public getAttribs(ent_type: ENT_TYPE): string[]  {
-        return this.graph.successors(_GRAPH_ATTRIBS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)
+        return this.graph.successors(_GRAPH_ATTRIBS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)
             .map( att => this.graph.getNodeProp(att, 'name') );
     }
     // ---------------------------------------------------------------------------------------------
@@ -559,79 +562,13 @@ export class Sim {
     // GET METHODS FOR ENTITIES
     // =============================================================================================
     /**
-     * Get a seuqence order, based on teh target and ccource ent types.
-     * @param target_ent_type 
-     * @param source_ent_type 
-     * @returns 
-     */
-     private _getEntSeq(target_ent_type: ENT_TYPE, source_ent_type: ENT_TYPE): any {
-        if (target_ent_type === ENT_TYPE.POINTS || source_ent_type === ENT_TYPE.POINTS) {
-            return _ENT_SEQ_COLL_POINT_POSI;
-        } else if (target_ent_type === ENT_TYPE.PLINES || source_ent_type === ENT_TYPE.PLINES) {
-            return _ENT_SEQ_COLL_PLINE_POSI;
-        } else if (target_ent_type === ENT_TYPE.PGONS || source_ent_type === ENT_TYPE.PGONS) {
-            return _ENT_SEQ_COLL_PGON_POSI;
-        }
-        return _ENT_SEQ
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Navigate up and down the entity hierarchy.
-     * @param target_ent_type 
-     * @param source_ent 
-     * @returns 
-     */
-    // TODO more tests needed
-    private _nav(target_ent_type: ENT_TYPE, source_ent: string): string[] {
-        const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
-        const ent_seq: any = this._getEntSeq(target_ent_type, source_ent_type);
-        if (source_ent_type === target_ent_type) {
-            if (source_ent_type === ENT_TYPE.COLLS) {
-                return []; // TODO nav colls of colls
-            }
-            return [source_ent];
-        }
-        const dist: number = ent_seq[source_ent_type] - ent_seq[target_ent_type]
-        if (dist === 1) {
-            return this.graph.successors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
-        }
-        if (dist === -1) {
-            return this.graph.predecessors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
-        }
-        let ents: string[] = [source_ent];
-        const target_ents_set: Set<string> = new Set();
-        while (ents.length > 0) {
-            const ent_set: Set<string> = new Set();
-            for (const ent of ents) {
-                const target_ents: string[] = dist > 0 ? 
-                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
-                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
-                for (const target_ent of target_ents) {
-                    const this_ent_type: ENT_TYPE = this.graph.getNodeProp(target_ent, 'ent_type');
-                    if (this_ent_type === target_ent_type) {
-                        target_ents_set.add(target_ent);
-                    } else if (this_ent_type in ent_seq) {
-                        if (dist > 0 && ent_seq[this_ent_type] > ent_seq[target_ent_type]) {
-                            ent_set.add(target_ent);
-                        } else if (dist < 0 && ent_seq[this_ent_type] < ent_seq[target_ent_type]) {
-                            ent_set.add(target_ent); 
-                        }
-                    }
-                }
-            }
-            ents = Array.from(ent_set);
-        }
-        return Array.from(target_ents_set)
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
      * Get the number of entities of the specified entity type.  
      * @param ent_type The type of entity to search for in the model.
      * @returns A number of entities of the specified type in the model.
      */
     public numEnts(ent_type: ENT_TYPE): number {
         return this.graph.degreeOut(
-            _GRAPH_ENTS_NODE[ent_type], 
+            _GRAPH_ENTS_NODE.get(ent_type), 
             _GRAPH_EDGE_TYPE.META
         )
     }
@@ -653,7 +590,7 @@ export class Sim {
     public getEnts(target_ent_type: ENT_TYPE, source_ents: string|string[] = null): string[] {
         if (source_ents === null) {
             return this.graph.successors(
-                _GRAPH_ENTS_NODE[target_ent_type], 
+                _GRAPH_ENTS_NODE.get(target_ent_type), 
                 _GRAPH_EDGE_TYPE.META
             );
         }
@@ -664,7 +601,7 @@ export class Sim {
         // a list with one zero or one item
         if (source_ents.length === 0) {
             return this.graph.successors(
-                _GRAPH_ENTS_NODE[target_ent_type], 
+                _GRAPH_ENTS_NODE.get(target_ent_type), 
                 _GRAPH_EDGE_TYPE.META
             );
         } else if (source_ents.length === 1) {
@@ -678,6 +615,147 @@ export class Sim {
             }
         }
         return Array.from(ents_set);
+    }
+    private _getEntSeq(target_ent_type: ENT_TYPE, source_ent_type: ENT_TYPE): Map<string, number> {
+        if (target_ent_type === ENT_TYPE.POINTS || source_ent_type === ENT_TYPE.POINTS) {
+            return _ENT_SEQ_COLL_POINT_POSI;
+        } else if (target_ent_type === ENT_TYPE.PLINES || source_ent_type === ENT_TYPE.PLINES) {
+            return _ENT_SEQ_COLL_PLINE_POSI;
+        } else if (target_ent_type === ENT_TYPE.PGONS || source_ent_type === ENT_TYPE.PGONS) {
+            return _ENT_SEQ_COLL_PGON_POSI;
+        }
+        return _ENT_SEQ
+    }
+    // TODO more tests needed
+    private _nav(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+        const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+        const ent_seq: Map<string, number> = this._getEntSeq(target_ent_type, source_ent_type);
+        if (source_ent_type === target_ent_type) {
+            if (source_ent_type === ENT_TYPE.COLLS) {
+                return []; // TODO nav colls of colls
+            }
+            return [source_ent];
+        }
+        const dist: number = ent_seq.get(source_ent_type) - ent_seq.get(target_ent_type);
+        if (dist === 1) {
+            return this.graph.successors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
+        }
+        if (dist === -1) {
+            return this.graph.predecessors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
+        }
+        let ents: string[] = [source_ent];
+        const target_ents_set: Set<string> = new Set();
+        while (ents.length > 0) {
+            const ent_set: Set<string> = new Set();
+            for (const ent of ents) {
+                const target_ents: string[] = dist > 0 ? 
+                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
+                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
+                for (const target_ent of target_ents) {
+                    const this_ent_type: ENT_TYPE = this.graph.getNodeProp(target_ent, 'ent_type');
+                    if (this_ent_type === target_ent_type) {
+                        target_ents_set.add(target_ent);
+                    } else if (ent_seq.has(this_ent_type)) {
+                        if (dist > 0 && ent_seq.get(this_ent_type) > ent_seq.get(target_ent_type)) {
+                            ent_set.add(target_ent);
+                        } else if (dist < 0 && ent_seq.get(this_ent_type) < ent_seq.get(target_ent_type)) {
+                            ent_set.add(target_ent); 
+                        }
+                    }
+                }
+            }
+            ents = Array.from(ent_set);
+        }
+        return Array.from(target_ents_set)
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Get sub ents of os a set of entites. The sub ents will include all the ents that are under
+     * the input ents, in the entity hierarchy. For example, if a polygon is passed in, then the
+     * sub ents will include the positions, vertices, edges, wires of that polygon. If a collection 
+     * if passed in, then the sub ents will inlude any points, polylines, polygons, and child 
+     * collections, as well as all thier respective sub entities. The lists of entities that are 
+     * returned will not have any duplicates. (They are sets.)
+     * 
+     * @param ents A list of entity IDs from which to get sub-entities.
+     * @returns Entity sets.
+     */
+     public getSubEnts(ents: string|string[]): TEntSets {
+        const ent_sets: Map<ENT_TYPE, Set<string>> = new Map([
+            [ENT_TYPE.POSIS, new Set()],
+            [ENT_TYPE.VERTS, new Set()],
+            [ENT_TYPE.EDGES, new Set()],
+            [ENT_TYPE.WIRES, new Set()],
+            [ENT_TYPE.POINTS, new Set()],
+            [ENT_TYPE.PLINES, new Set()],
+            [ENT_TYPE.PGONS, new Set()],
+            [ENT_TYPE.COLLS, new Set()],
+        ]);
+        if (!Array.isArray(ents)) { ents = [ents]; }
+        for (const ent of ents) {
+            const ent_type = this.graph.getNodeProp(ent, 'ent_type');
+            if (ent_type === ENT_TYPE.POSIS) {
+                ent_sets.get(ENT_TYPE.POSIS).add(ent);
+            } else if (ent_type === ENT_TYPE.POINTS) {
+                this._getPointSubEnts(ent, ent_sets);
+            } else if (ent_type === ENT_TYPE.PLINES) {
+                this._getPlineSubEnts(ent, ent_sets);
+            } else if (ent_type === ENT_TYPE.PGONS) {
+                this._getPgonSubEnts(ent, ent_sets);
+            } else if (ent_type === ENT_TYPE.COLLS) {
+                ent_sets.get(ENT_TYPE.COLLS).add(ent);
+                for (const point of this.getEnts(ENT_TYPE.POINTS, ent)) {
+                    this._getPointSubEnts(point, ent_sets);
+                }
+                for (const pline of this.getEnts(ENT_TYPE.PLINES, ent)) {
+                    this._getPlineSubEnts(pline, ent_sets);
+                }
+                for (const pgon of this.getEnts(ENT_TYPE.PGONS, ent)) {
+                    this._getPgonSubEnts(pgon, ent_sets);
+                }
+                for (const child_coll of this.getEnts(ENT_TYPE.COLLS, ent)) {
+                    ent_sets.get(ENT_TYPE.COLLS).add(child_coll);
+                }
+            } else {
+                throw new Error('Entity type not supported: ' + ent_type);
+            }
+        }
+        return new Map([
+            [ENT_TYPE.POSIS, Array.from(ent_sets.get(ENT_TYPE.POSIS))],
+            [ENT_TYPE.VERTS, Array.from(ent_sets.get(ENT_TYPE.VERTS))],
+            [ENT_TYPE.EDGES, Array.from(ent_sets.get(ENT_TYPE.EDGES))],
+            [ENT_TYPE.WIRES, Array.from(ent_sets.get(ENT_TYPE.WIRES))],
+            [ENT_TYPE.POINTS, Array.from(ent_sets.get(ENT_TYPE.POINTS))],
+            [ENT_TYPE.PLINES, Array.from(ent_sets.get(ENT_TYPE.PLINES))],
+            [ENT_TYPE.PGONS, Array.from(ent_sets.get(ENT_TYPE.PGONS))],
+            [ENT_TYPE.COLLS, Array.from(ent_sets.get(ENT_TYPE.COLLS))],
+        ]);
+    }
+    private _getPointSubEnts(point: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
+        ent_sets.get(ENT_TYPE.POINTS).add(point);
+        const vert = this.getEnts(ENT_TYPE.VERTS, point)[0];
+        ent_sets.get(ENT_TYPE.VERTS).add(vert);
+        ent_sets.get(ENT_TYPE.POSIS).add(this.getEnts(ENT_TYPE.POSIS, vert)[0]);
+    }
+    private _getPlineSubEnts(pline: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
+        ent_sets.get(ENT_TYPE.PLINES).add(pline);
+        this.getEnts(ENT_TYPE.EDGES, pline).map(edge => ent_sets.get(ENT_TYPE.EDGES).add(edge));
+        for (const vert of this.getEnts(ENT_TYPE.VERTS, pline)) {
+            ent_sets.get(ENT_TYPE.VERTS).add(vert);
+            ent_sets.get(ENT_TYPE.POSIS).add(this.getEnts(ENT_TYPE.POSIS, vert)[0]);
+        }
+    }
+    private _getPgonSubEnts(pgon: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
+        ent_sets.get(ENT_TYPE.PGONS).add(pgon);
+        const wires = this.getEnts(ENT_TYPE.WIRES, pgon);
+        for (const wire of wires) {
+            ent_sets.get(ENT_TYPE.WIRES).add(wire);
+            this.getEnts(ENT_TYPE.EDGES, wire).map(edge => ent_sets.get(ENT_TYPE.EDGES).add(edge));
+            for (const vert of this.getEnts(ENT_TYPE.VERTS, wire)) {
+                ent_sets.get(ENT_TYPE.VERTS).add(vert);
+                ent_sets.get(ENT_TYPE.POSIS).add(this.getEnts(ENT_TYPE.POSIS, vert)[0]);
+            }
+        }
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -771,17 +849,12 @@ export class Sim {
     // QUERY
     // =============================================================================================
     /**
-     * Check if a polyline is open or closed.
-     * @param pline A polyline ID.
-     * @returns True if closed, false if open.
+     * Return the entity type of an entity in the model
+     * @param ent An entity ID.
+     * @returns The entity type (see ENT_TYPE).
      */
-    public isPlineClosed(pline: string): boolean { 
-        const edges: string[] = this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENTITY);
-        const start_posi: string = this.graph.successors(
-            this.graph.successors(edges[0], _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY)[0];
-        const end_posi: string = this.graph.successors(
-            this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1], _GRAPH_EDGE_TYPE.ENTITY)[0];
-        return start_posi === end_posi;
+    public entType(ent: string): ENT_TYPE { 
+        return this.graph.getNodeProp(ent, 'ent_type');
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -803,7 +876,7 @@ export class Sim {
         if (comparator === COMPARATOR.IS_EQUAL && att_val === null) {
             const set_with_val: Set<string> = new Set(this.graph.getNodesWithOutEdge(att));
             const set_all: Set<string> = new Set(
-                this.graph.successors(_GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META));
+                this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META));
             return Array.from(set_all).filter(item => !set_with_val.has(item));
         }
         // val !== null
@@ -822,15 +895,15 @@ export class Sim {
         if (comparator === '!=') {
             const att_val_node: string = this._graphAttribValNodeName(att_val)
             if (!this.graph.hasNode(att_val_node)) {
-                return this.graph.successors(_GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META);
+                return this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META);
             }
             const ents_equal: string[] = this.graph.predecessors(att_val_node, att);
             if (ents_equal.length === 0) {
-                return this.graph.successors(_GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META);
+                return this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META);
             }
             const set_equal: Set<string> = new Set(ents_equal)
             const set_all: Set<string> = new Set(
-                this.graph.successors(_GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META));
+                this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META));
             return Array.from(set_all).filter(item => !set_equal.has(item));
         }
         // other cases, data_type must be a number
@@ -843,7 +916,7 @@ export class Sim {
         // val < att_val
         if (comparator === COMPARATOR.IS_LESS) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
+                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') < att_val) {
                     result.push(ent)
@@ -853,7 +926,7 @@ export class Sim {
         // val <= att_val
         else if (comparator === COMPARATOR.IS_LESS_OR_EQUAL) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
+                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') <= att_val) {
                     result.push(ent);
@@ -863,7 +936,7 @@ export class Sim {
         // val > att_val
         else if (comparator === COMPARATOR.IS_GREATER) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
+                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') > att_val) {
                     result.push(ent);
@@ -873,7 +946,7 @@ export class Sim {
         // val >= att_val
         else if (comparator === COMPARATOR.IS_GREATER_OR_EQUAL) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE[ent_type], _GRAPH_EDGE_TYPE.META)) {
+                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') >= att_val) {
                     result.push(ent);
@@ -883,6 +956,20 @@ export class Sim {
         // return list of entities
         // TODO handle queries sub-entities in lists and dicts
         return result;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Check if a polyline is open or closed.
+     * @param pline A polyline ID.
+     * @returns True if closed, false if open.
+     */
+     public isPlineClosed(pline: string): boolean { 
+        const edges: string[] = this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENTITY);
+        const start_posi: string = this.graph.successors(
+            this.graph.successors(edges[0], _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY)[0];
+        const end_posi: string = this.graph.successors(
+            this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1], _GRAPH_EDGE_TYPE.ENTITY)[0];
+        return start_posi === end_posi;
     }
     // =============================================================================================
     // UTILITY 

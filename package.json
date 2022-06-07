@@ -2,6 +2,11 @@
     "name": "mobius-sim-ts",
     "version": "0.0.1",
     "description": "Typescript library for reading and writing Mobius SIM files",
+    "jest": {
+        "verbose": true,
+        "preset": "ts-jest",
+        "testEnvironment": "node"
+    },
     "scripts": {
         "test": "jest"
     },
