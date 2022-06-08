@@ -1,4 +1,4 @@
-import { Sim, ENT_TYPE, COMPARATOR, TEntSets } from './sim'
+import { Sim, ENT_TYPE, COMPARATOR, TEntSets, DATA_TYPE } from './sim'
 import { readFileSync, writeFileSync } from 'fs';
 // ==================================================================================================
 // Functions for importing and exporting models in the SIM file format.
@@ -113,6 +113,7 @@ export function exportSimData(sim_model: Sim, ents: string|string[] = null): obj
         'geometry': geometry,
         'attributes': attributes
     };
+    // console.log(">>>>", JSON.stringify(data))
     return data;
 }
 // ----------------------------------------------------------------------------------------------
@@ -142,8 +143,8 @@ export function exportSimFile(sim_model: Sim, filepath: string, ents: string|str
  * @param sim_model 
  * @param json_data 
  */
-export function importSimData(sim_model: Sim, json_data: object): void {
-    // check we have teh right data
+export function importSimData(sim_model: Sim, json_data: object, coll_name: string = null): void {
+    // check we have the right data
     if (json_data['type'] !== 'SIM') {
         throw new Error('Data is not a SIM model');
     }
@@ -151,43 +152,68 @@ export function importSimData(sim_model: Sim, json_data: object): void {
         throw new Error('SIM Data is wrong version.' +
         'Version should be 0.1. This data is version ' + json_data['version'] + '.');
     }
-    const posis: string[] = []
+    // get current num entities
+    const num_ents: Map<ENT_TYPE, number> = new Map([
+        [ENT_TYPE.POSIS, sim_model.numEnts(ENT_TYPE.POSIS)],
+        [ENT_TYPE.VERTS, sim_model.numEnts(ENT_TYPE.VERTS)],
+        [ENT_TYPE.EDGES, sim_model.numEnts(ENT_TYPE.EDGES)],
+        [ENT_TYPE.WIRES, sim_model.numEnts(ENT_TYPE.WIRES)],
+        [ENT_TYPE.POINTS, sim_model.numEnts(ENT_TYPE.POINTS)],
+        [ENT_TYPE.PLINES, sim_model.numEnts(ENT_TYPE.PLINES)],
+        [ENT_TYPE.PGONS, sim_model.numEnts(ENT_TYPE.PGONS)],
+        [ENT_TYPE.COLLS, sim_model.numEnts(ENT_TYPE.COLLS)]
+    ]);
+    // create coll
+    let imp_coll: string = null;
+    if (coll_name !== null) {
+        imp_coll = sim_model.addColl();
+        if (!sim_model.hasAttrib(ENT_TYPE.COLLS, 'name')) {
+            sim_model.addAttrib(ENT_TYPE.COLLS, 'name', DATA_TYPE.STR);
+
+        }
+        sim_model.setAttribVal(imp_coll, 'name', coll_name);
+    }
     // posis
+    const posis: string[] = []
     for (let i = 0; i < json_data['geometry']['num_posis']; i++) {
         posis.push(sim_model.addPosi([0,0,0]));
     }
     // points
     for (const posi_i of json_data['geometry']['points']) {
-        sim_model.addPoint(posis[posi_i]);
+        const point: string = sim_model.addPoint(posis[posi_i]);
+        if (imp_coll !== null) { sim_model.addCollEnt(imp_coll, point); }
     }
     // polylines
     for (const posis_i of json_data['geometry']['plines']) {
-        sim_model.addPline((posis_i as string[]).map(posi_i => posis[posi_i]));
+        const pline: string = sim_model.addPline((posis_i as string[]).map(posi_i => posis[posi_i]));
+        if (imp_coll !== null) { sim_model.addCollEnt(imp_coll, pline); }
     }
     // polygons
     for (const posis_i of json_data['geometry']['pgons']) {
         const pgon: string = sim_model.addPgon((posis_i[0] as string[]).map( posi_i => posis[posi_i]));
         for (let i = 1; i < posis_i.length; i++) {
             // TODO add holes
-            // sim_model.editPgonHole(pgon, (posis_i[i] as string[]).map( posi_i => posis[posi_i]));
+            // sim_model.addPgonHole(pgon, (posis_i[i] as string[]).map( posi_i => posis[posi_i]));
         }
+        if (imp_coll !== null) { sim_model.addCollEnt(imp_coll, pgon); }
     }
     // collections
     const num_colls: number = json_data['geometry']['coll_points'].length;
     for (let i = 0; i < num_colls; i++) {
-        const coll = sim_model.addColl()
+        const coll = sim_model.addColl();
         for (const point_i of json_data['geometry']['coll_points'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.POINTS + point_i);
+            sim_model.addCollEnt(coll, ENT_TYPE.POINTS + (num_ents.get(ENT_TYPE.POINTS) + point_i));
         }
         for (const pline_i of json_data['geometry']['coll_plines'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.PLINES + pline_i);
+            sim_model.addCollEnt(coll, ENT_TYPE.PLINES + (num_ents.get(ENT_TYPE.PLINES) + pline_i));
         }
         for (const pgon_i of json_data['geometry']['coll_pgons'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.PGONS + pgon_i);
+            sim_model.addCollEnt(coll, ENT_TYPE.PGONS + (num_ents.get(ENT_TYPE.PGONS) + pgon_i));
         }
         for (const child_coll_i of json_data['geometry']['coll_colls'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.COLLS + child_coll_i);
+            sim_model.addCollEnt(coll, ENT_TYPE.COLLS + (num_ents.get(ENT_TYPE.COLLS) + child_coll_i));
         }
+        if (imp_coll !== null) { sim_model.addCollEnt(imp_coll, coll); }
     }
     for (const [ent_type, ent_name] of ent_types) {
         for (const attrib of json_data['attributes'][ent_name]) {
@@ -200,11 +226,10 @@ export function importSimData(sim_model: Sim, json_data: object): void {
             } else {
                 sim_model.addAttrib(ent_type, att_name, attrib['data_type']);
             }
-            
             for (let i = 0; i < attrib['values'].length; i++) {
                 const att_value = attrib['values'][i];
                 for (const ent_i of attrib['entities'][i]) {
-                    const ent: string = ent_type + ent_i;
+                    const ent: string = ent_type + (num_ents.get(ent_type) + ent_i);
                     sim_model.setAttribVal(ent, att_name, att_value);
                 }
             }
@@ -222,9 +247,9 @@ export function importSimData(sim_model: Sim, json_data: object): void {
  * @param json_str 
  * @returns 
  */
-export function importSim(sim_model: Sim, json_str: string): void {  
+export function importSim(sim_model: Sim, json_str: string, coll_name: string = null): void {  
     const json_data = JSON.parse(json_str);
-    importSimData(sim_model, json_data);
+    importSimData(sim_model, json_data, coll_name);
 }
 // ----------------------------------------------------------------------------------------------
 /**
@@ -233,9 +258,9 @@ export function importSim(sim_model: Sim, json_str: string): void {
  * @param filepath 
  * @returns 
  */
-export function importSimFile(sim_model: Sim, filepath: string): void {
+export function importSimFile(sim_model: Sim, filepath: string, coll_name: string = null): void {
     const json_str: string = readFileSync(filepath, 'utf-8');
-    importSim(sim_model, json_str);
+    importSim(sim_model, json_str, coll_name);
     console.log('Importing file successful.');
 }
 // ==================================================================================================

@@ -4,6 +4,13 @@ type TGraphEdges = Map<string, Set<string>>;
 type TGraphFREdges = Map<number, TGraphEdges>;
 type TGraphEdgeTypes = Map<string, TGraphFREdges>;
 type TGraphSnapshots = Map<number, TGraphEdgeTypes>;
+// enums
+export enum X2X {
+    O2O,
+    O2M,
+    M2O,
+    M2M
+}
 // Graph class
 export class Graph {
     private static FWD: number = 0;
@@ -431,8 +438,9 @@ export class Graph {
      * Copy a set of edges from another snapshot into the current active snapshot.
      * @param edge_type The type of edges to copy.
      * @param ssid The snapshot ID to copy from.
+     * @param x2x The relationship between nodes, for clash detection.
      */
-    public snapshotCopyEdges(edge_type: string, ssid: number): void {
+    public snapshotCopyEdges(edge_type: string, ssid: number, x2x: X2X = X2X.M2M): void {
         // get the other edges to copy
         const other_edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
         if (other_edges === undefined) {
@@ -454,6 +462,9 @@ export class Graph {
                 const curr_nodes1_set: Set<string> = curr_edges.get(Graph.FWD).get(other_node0);
                 for (const other_node1 of other_nodes1_set) {
                     curr_nodes1_set.add(other_node1);
+                    if (x2x !== X2X.M2M && x2x !== X2X.O2M && curr_nodes1_set.size > 1) {
+                        throw new Error('Node relationship violated: ' + X2X[x2x]);
+                    }
                 }
             } else {
                 curr_edges.get(Graph.FWD).set(other_node0, cloneDeep(other_nodes1_set));
@@ -466,6 +477,9 @@ export class Graph {
                     const curr_nodes1_set: Set<string> = curr_edges.get(Graph.REV).get(other_node0);
                     for (const other_node1 of other_nodes1_set) {
                         curr_nodes1_set.add(other_node1);
+                        if (x2x !== X2X.M2M && x2x !== X2X.M2O && curr_nodes1_set.size > 1) {
+                            throw new Error('Node relationship violated: ' + X2X[x2x]);
+                        }
                     }
                 } else {
                     curr_edges.get(Graph.REV).set(other_node0, cloneDeep(other_nodes1_set));

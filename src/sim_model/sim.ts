@@ -13,6 +13,8 @@ export enum ENT_TYPE {
     PLINES = 'pl',
     PGONS = 'pg',
     COLLS = 'co',
+    COLLS_P = 'cp',
+    COLLS_S = 'cs',
     MODEL = 'mo'
 }
 // -------------------------------------------------------------------------------------------------
@@ -310,32 +312,37 @@ export class Sim {
         if (posis.length < 2) {
             throw new Error('Too few positions for polyline.');
         }
-        const closed: boolean = posis[0] === posis[posis.length - 1];
-        // vertices
-        const num_posis: number = closed ? posis.length - 1 : posis.length;
-        const verts: string[] = [];
-        for(let i = 0; i < num_posis; i++) {
-            const posi: string = posis[i];
-            const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
-            this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
-            verts.push(vert);
-        }
-        if (closed) { verts.push(verts[0]); }
-        // edges
-        const edges: string[] = [];
-        for (let i = 0; i < verts.length - 1; i++) {
-            const edge: string = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(edge, verts[i], _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, verts[i + 1], _GRAPH_EDGE_TYPE.ENTITY);
-            edges.push(edge);
-        }
         // pline
-        const pline: string = this._graphAddEnt(ENT_TYPE.PLINES);
-        for (let i = 0; i < edges.length; i++) {
-            this.graph.addEdge(pline, edges[i], _GRAPH_EDGE_TYPE.ENTITY);
-        }
+        const pline = this._graphAddEnt(ENT_TYPE.PLINES);
+        this._addEdgeSeq(posis, posis.length - 1, posis[0] === posis[posis.length - 1], pline);
         //  return
         return pline;
+    }
+    private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, parent: string) {
+        const num_verts: number = closed ? num_edges : num_edges + 1;
+        let v0: string, v1: string, edge: string;
+        // v0
+        const v_start: string = this._graphAddEnt(ENT_TYPE.VERTS);
+        this.graph.addEdge(v_start, posis[0], _GRAPH_EDGE_TYPE.ENTITY);
+        v0 = v_start;
+        for (let i = 1; i < num_verts; i++) {
+            // v1
+            v1 = this._graphAddEnt(ENT_TYPE.VERTS);
+            this.graph.addEdge(v1, posis[i], _GRAPH_EDGE_TYPE.ENTITY);
+            // edge
+            edge = this._graphAddEnt(ENT_TYPE.EDGES);
+            this.graph.addEdge(parent, edge, _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v0, _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENTITY);
+            v0 = v1;
+        }
+        // last edge
+        if (closed) {
+            edge = this._graphAddEnt(ENT_TYPE.EDGES);
+            this.graph.addEdge(parent, edge, _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v_start, _GRAPH_EDGE_TYPE.ENTITY);
+        }
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -347,34 +354,33 @@ export class Sim {
         if (posis.length < 3) {
             throw new Error('Too few positions for polygon.');
         }
-        // vertices
-        const verts: string[] = [];
-        for (const posi of posis) {
-            const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
-            this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
-            verts.push(vert);
-        }
-        verts.push(verts[0]);
-        // edges
-        const edges = [];
-        for (let i = 0; i < verts.length - 1; i++) {
-            const v0 = verts[i];
-            const v1 = verts[i+1];
-            const edge = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(edge, v0, _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENTITY);
-            edges.push(edge);
+        // pgon and wire
+        const pgon = this._graphAddEnt(ENT_TYPE.PGONS);
+        const wire = this._graphAddEnt(ENT_TYPE.WIRES);
+        this.graph.addEdge(pgon, wire, _GRAPH_EDGE_TYPE.ENTITY);
+        // verts and edges
+        this._addEdgeSeq(posis, posis.length, true, wire);
+        //  return
+        return pgon;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Create a hole in a polygon.
+     * @param pgon The polygon ID.
+     * @param posis A list of position IDs for the hole.
+     * @returns The ID of the hole wire.
+     */
+    public addPgonHole(pgon: string, posis: string[]): string {
+        if (posis.length < 3) {
+            throw new Error('Too few positions for polygon.');
         }
         // wire
         const wire = this._graphAddEnt(ENT_TYPE.WIRES);
-        for (let i = 0; i < edges.length; i++) {
-            this.graph.addEdge(wire, edges[i], _GRAPH_EDGE_TYPE.ENTITY);
-        }
-        // pline
-        const pgon = this._graphAddEnt(ENT_TYPE.PGONS);
         this.graph.addEdge(pgon, wire, _GRAPH_EDGE_TYPE.ENTITY);
+        // verts and edges
+        this._addEdgeSeq(posis, posis.length, true, wire);
         //  return
-        return pgon;
+        return wire;
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -596,7 +602,7 @@ export class Sim {
         }
         // not a list
         if (!Array.isArray(source_ents)) {
-            return this._nav(target_ent_type, source_ents);
+            return this._navigate(target_ent_type, source_ents);
         }
         // a list with one zero or one item
         if (source_ents.length === 0) {
@@ -605,12 +611,12 @@ export class Sim {
                 _GRAPH_EDGE_TYPE.META
             );
         } else if (source_ents.length === 1) {
-            return this._nav(target_ent_type, source_ents[0]);
+            return this._navigate(target_ent_type, source_ents[0]);
         }
         // a list with multiple items
         const ents_set: Set<string> = new Set();
         for (const source_ent of source_ents) {
-            for (const target_ent of this._nav(target_ent_type, source_ent)) {
+            for (const target_ent of this._navigate(target_ent_type, source_ent)) {
                 ents_set.add(target_ent);
             }
         }
@@ -626,14 +632,13 @@ export class Sim {
         }
         return _ENT_SEQ
     }
-    // TODO more tests needed
-    private _nav(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+    private _navigate(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+        if (target_ent_type === ENT_TYPE.COLLS_S || target_ent_type === ENT_TYPE.COLLS_P) {
+            return this._navigateColls(target_ent_type, source_ent);
+        }
         const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
         const ent_seq: Map<string, number> = this._getEntSeq(target_ent_type, source_ent_type);
         if (source_ent_type === target_ent_type) {
-            if (source_ent_type === ENT_TYPE.COLLS) {
-                return []; // TODO nav colls of colls
-            }
             return [source_ent];
         }
         const dist: number = ent_seq.get(source_ent_type) - ent_seq.get(target_ent_type);
@@ -644,29 +649,61 @@ export class Sim {
             return this.graph.predecessors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
         }
         let ents: string[] = [source_ent];
-        const target_ents_set: Set<string> = new Set();
+        const result_set: Set<string> = new Set();
+        let ents_set: Set<string>;
         while (ents.length > 0) {
-            const ent_set: Set<string> = new Set();
+            // ents_set.clear(); // avoid garbage collection
+            ents_set = new Set();
             for (const ent of ents) {
-                const target_ents: string[] = dist > 0 ? 
+                const nav_ents: string[] = dist > 0 ?
                     this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
                     this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
-                for (const target_ent of target_ents) {
-                    const this_ent_type: ENT_TYPE = this.graph.getNodeProp(target_ent, 'ent_type');
-                    if (this_ent_type === target_ent_type) {
-                        target_ents_set.add(target_ent);
-                    } else if (ent_seq.has(this_ent_type)) {
-                        if (dist > 0 && ent_seq.get(this_ent_type) > ent_seq.get(target_ent_type)) {
-                            ent_set.add(target_ent);
-                        } else if (dist < 0 && ent_seq.get(this_ent_type) < ent_seq.get(target_ent_type)) {
-                            ent_set.add(target_ent); 
+                for (const nav_ent of nav_ents) {
+                    const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
+                    if (nav_ent_type === target_ent_type) {
+                        result_set.add(nav_ent);
+                        if (target_ent_type === ENT_TYPE.COLLS) {
+                            ents_set.add(nav_ent);
+                        }
+                    } else if (ent_seq.has(nav_ent_type)) {
+                        if (dist > 0 && ent_seq.get(nav_ent_type) > ent_seq.get(target_ent_type)) {
+                            ents_set.add(nav_ent);
+                        } else if (dist < 0 && ent_seq.get(nav_ent_type) < ent_seq.get(target_ent_type)) {
+                            ents_set.add(nav_ent); 
                         }
                     }
                 }
             }
-            ents = Array.from(ent_set);
+            ents = Array.from(ents_set);
         }
-        return Array.from(target_ents_set)
+        return Array.from(result_set)
+    }
+    private _navigateColls(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+        const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+        if (source_ent_type !== ENT_TYPE.COLLS) {
+            throw new Error('Source entity must be a collection.');
+        }
+        let ents: string[] = [source_ent];
+        const result_set: Set<string> = new Set();
+        let colls_set: Set<string>;
+        while (ents.length > 0) {
+            // colls_set.clear(); // avoid garbage collection
+            colls_set = new Set();
+            for (const ent of ents) {
+                const nav_ents: string[] = target_ent_type === ENT_TYPE.COLLS_S ? 
+                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
+                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
+                for (const nav_ent of nav_ents) {
+                    const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
+                    if (nav_ent_type === ENT_TYPE.COLLS) {
+                        result_set.add(nav_ent);
+                        colls_set.add(nav_ent);
+                    }
+                }
+            }
+            ents = Array.from(colls_set);
+        }
+        return Array.from(result_set)
     }
     // ---------------------------------------------------------------------------------------------
     /**

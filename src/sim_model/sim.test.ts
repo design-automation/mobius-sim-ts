@@ -161,12 +161,34 @@ test('Polyline with duplicate positions.', () => {
     expect(sim.getEntPosis(pline)).toEqual(['ps0', 'ps1', 'ps2', 'ps3', 'ps4', 'ps2', 'ps0']);
 });
 
+test('Nav colls of colls.', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([-10, 10, 0]);
+    const pt0 = sim.addPoint(p0);
+    const coll0 = sim.addColl();
+    sim.addCollEnt(coll0, pt0);
+    const coll1 = sim.addColl();
+    sim.addCollEnt(coll1, coll0);
+    const coll2 = sim.addColl();
+    sim.addCollEnt(coll2, coll1);
+    expect(sim.getEnts(ENT_TYPE.POINTS, coll2)).toEqual(['pt0']);
+    expect(sim.getEnts(ENT_TYPE.COLLS, pt0)).toEqual(['co0', 'co1', 'co2']);
+    expect(sim.getEnts(ENT_TYPE.COLLS_S, coll2)).toEqual(['co1', 'co0']);
+    expect(sim.getEnts(ENT_TYPE.COLLS_P, coll1)).toEqual(['co2']);
+});
 
-// test('xxx', () => {
-//     const sim: Sim = new Sim();
-//     sim.addAttrib(ENT_TYPE.POINTS, 'msg', DATA_TYPE.STR);
-//     const p0 = sim.addPosi([1,2,3]);
-//     const pt0 = sim.addPoint(p0);
-//     sim.setAttribVal(pt0, 'msg', 'hello');
-//     expect(sim.toString()).toEqual(['dummy']);
-// });
+test('Pgon with hole posis', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([0,0,0]);
+    const p1 = sim.addPosi([10,0,0]);
+    const p2 = sim.addPosi([10,10,0]);
+    const p3 = sim.addPosi([0,10,0]);
+    const pgon = sim.addPgon([p0, p1, p2, p3]);
+    const p4 = sim.addPosi([5,5,0]);
+    const p5 = sim.addPosi([5,7,0]);
+    const p6 = sim.addPosi([7,7,0]);
+    const wire = sim.addPgonHole(pgon, [p4, p5, p6]);
+    const posis = sim.getEntPosis(pgon);
+    expect(posis).toEqual([['ps0', 'ps1', 'ps2', 'ps3'],['ps4', 'ps5', 'ps6']]);
+    // expect(sim.toString()).toEqual(['dummy']);
+});
