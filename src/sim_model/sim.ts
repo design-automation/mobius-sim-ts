@@ -1,21 +1,29 @@
-import { Graph } from './graph';
+import { Delete } from './sim_delete';
+import { Graph, X2X } from './graph';
 // =================================================================================================
 // ENUMS
 // =================================================================================================
 // An Enum that defines a set of constants for different entity types. 
 // These types are used when adding an attribute to the model.
 export enum ENT_TYPE {
-    POSIS = 'ps',
-    VERTS = '_v',
-    EDGES = '_e',
-    WIRES = '_w',
-    POINTS = 'pt',
-    PLINES = 'pl',
-    PGONS = 'pg',
-    COLLS = 'co',
-    COLLS_P = 'cp',
-    COLLS_S = 'cs',
+    POSI = 'ps',
+    VERT = '_v',
+    EDGE = '_e',
+    WIRE = '_w',
+    POINT = 'pt',
+    PLINE = 'pl',
+    PGON = 'pg',
+    COLL = 'co',
+    COLL_PRED = 'cp',
+    COLL_SUCC = 'cs',
     MODEL = 'mo'
+}
+// -------------------------------------------------------------------------------------------------
+export enum OBJ_TYPE {
+    POINT,
+    PLINE,
+    PGON,
+    PGON_HOLE
 }
 // -------------------------------------------------------------------------------------------------
 // An Enum that defines a set of constants for possible data types for attributes. 
@@ -38,7 +46,7 @@ export enum COMPARATOR {
     IS_LESS = '<'
 }
 // -------------------------------------------------------------------------------------------------
-enum _GRAPH_EDGE_TYPE {
+export enum _GR_EDGE_TYPE {
     ENTITY = 'entity',
     ATTRIB =  'attrib',
     META = 'meta'
@@ -48,102 +56,129 @@ enum _GRAPH_EDGE_TYPE {
 // =================================================================================================
 export type TAttribDataTypes = string | number | boolean | any[] | object;
 export type Txyz = [number, number, number];
-export type TEntSets = Map<ENT_TYPE, string[]>;
+export type TEntSets = Map<ENT_TYPE, Set<string>>;
 // =================================================================================================
 // MAPS
 // =================================================================================================
 // node names for meta ents
-const _GRAPH_ENTS_NODE: Map<string, string> = new Map([
-    [ENT_TYPE.POSIS, '_ents_posis'],
-    [ENT_TYPE.VERTS, '_ents_verts'],
-    [ENT_TYPE.EDGES, '_ents_edges'],
-    [ENT_TYPE.WIRES, '_ents_wires'],
-    [ENT_TYPE.POINTS, '_ents_points'],
-    [ENT_TYPE.PLINES, '_ents_plines'],
-    [ENT_TYPE.PGONS, '_ents_pgons'],
-    [ENT_TYPE.COLLS, '_ents_colls']
+export const _GR_ENT_NODE: Map<ENT_TYPE, string> = new Map([
+    [ENT_TYPE.POSI, '_ents_posis'],
+    [ENT_TYPE.VERT, '_ents_verts'],
+    [ENT_TYPE.EDGE, '_ents_edges'],
+    [ENT_TYPE.WIRE, '_ents_wires'],
+    [ENT_TYPE.POINT, '_ents_points'],
+    [ENT_TYPE.PLINE, '_ents_plines'],
+    [ENT_TYPE.PGON, '_ents_pgons'],
+    [ENT_TYPE.COLL, '_ents_colls']
 ]);
 // -------------------------------------------------------------------------------------------------
 // node names for meta attribs
-const _GRAPH_ATTRIBS_NODE: Map<string, string> = new Map([
-    [ENT_TYPE.POSIS, '_atts_posis'],
-    [ENT_TYPE.VERTS, '_atts_verts'],
-    [ENT_TYPE.EDGES, '_atts_edges'],
-    [ENT_TYPE.WIRES, '_atts_wires'],
-    [ENT_TYPE.POINTS, '_atts_points'],
-    [ENT_TYPE.PLINES, '_atts_plines'],
-    [ENT_TYPE.PGONS, '_atts_pgons'],
-    [ENT_TYPE.COLLS, '_atts_colls']
+export const _GR_ATTRIB_NODE: Map<ENT_TYPE, string> = new Map([
+    [ENT_TYPE.POSI, '_atts_posis'],
+    [ENT_TYPE.VERT, '_atts_verts'],
+    [ENT_TYPE.EDGE, '_atts_edges'],
+    [ENT_TYPE.WIRE, '_atts_wires'],
+    [ENT_TYPE.POINT, '_atts_points'],
+    [ENT_TYPE.PLINE, '_atts_plines'],
+    [ENT_TYPE.PGON, '_atts_pgons'],
+    [ENT_TYPE.COLL, '_atts_colls']
 ]);
 // -------------------------------------------------------------------------------------------------
 // ENT SEQUENCES FOR QUERES
-const _ENT_SEQ: Map<string, number> = new Map([
-    [ENT_TYPE.POSIS, 0], 
-    [ENT_TYPE.VERTS, 1], 
-    [ENT_TYPE.EDGES, 2], 
-    [ENT_TYPE.WIRES, 3], 
-    [ENT_TYPE.POINTS, 4], 
-    [ENT_TYPE.PLINES, 4], 
-    [ENT_TYPE.PGONS, 4], 
-    [ENT_TYPE.COLLS, 6]
+const _ENT_SEQ: Map<ENT_TYPE, number> = new Map([
+    [ENT_TYPE.POSI, 0], 
+    [ENT_TYPE.VERT, 1], 
+    [ENT_TYPE.EDGE, 2], 
+    [ENT_TYPE.WIRE, 3], 
+    [ENT_TYPE.POINT, 4], 
+    [ENT_TYPE.PLINE, 4], 
+    [ENT_TYPE.PGON, 4], 
+    [ENT_TYPE.COLL, 6]
 ]);
 // -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_COLL_POINT_POSI: Map<string, number> = new Map([
-    [ENT_TYPE.POSIS, 0],
-    [ENT_TYPE.VERTS, 1],
-    [ENT_TYPE.POINTS, 2],
-    [ENT_TYPE.COLLS, 6]
+const _ENT_SEQ_CO_PT_PO: Map<ENT_TYPE, number> = new Map([
+    [ENT_TYPE.POSI, 0],
+    [ENT_TYPE.POINT, 1],
+    [ENT_TYPE.COLL, 6]
 ]);
 // -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_COLL_PLINE_POSI: Map<string, number> = new Map([
-    [ENT_TYPE.POSIS, 0], 
-    [ENT_TYPE.VERTS, 1], 
-    [ENT_TYPE.EDGES, 2], 
-    [ENT_TYPE.PLINES, 3], 
-    [ENT_TYPE.COLLS, 6]
+const _ENT_SEQ_CO_PL_PO: Map<ENT_TYPE, number> = new Map([
+    [ENT_TYPE.POSI, 0], 
+    [ENT_TYPE.VERT, 1], 
+    [ENT_TYPE.EDGE, 2], 
+    [ENT_TYPE.PLINE, 3], 
+    [ENT_TYPE.COLL, 6]
 ]);
 // -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_COLL_PGON_POSI: Map<string, number> = new Map([
-     [ENT_TYPE.POSIS, 0],
-     [ENT_TYPE.VERTS, 1],
-     [ENT_TYPE.EDGES, 2],
-     [ENT_TYPE.WIRES, 3],
-     [ENT_TYPE.PGONS, 4],
-     [ENT_TYPE.COLLS, 6]
+const _ENT_SEQ_CO_PG_PO: Map<ENT_TYPE, number> = new Map([
+     [ENT_TYPE.POSI, 0],
+     [ENT_TYPE.VERT, 1],
+     [ENT_TYPE.EDGE, 2],
+     [ENT_TYPE.WIRE, 3],
+     [ENT_TYPE.PGON, 4],
+     [ENT_TYPE.COLL, 6]
 ]);
 // -------------------------------------------------------------------------------------------------
 // ENT_TYPES FOR COLLECTIONS
-const _COLL_ENT_TYPES: string[] = [
-    ENT_TYPE.POINTS, 
-    ENT_TYPE.PLINES, 
-    ENT_TYPE.PGONS, 
-    ENT_TYPE.COLLS
-]
+export const _COLL_ENT_TYPES: Set<ENT_TYPE> = new Set([
+    ENT_TYPE.POINT, 
+    ENT_TYPE.PLINE, 
+    ENT_TYPE.PGON, 
+    ENT_TYPE.COLL
+]);
+// -------------------------------------------------------------------------------------------------
+// ENT_TYPES FOR OBJECTS
+export const _OBJ_ENT_TYPES: Set<ENT_TYPE> = new Set([
+    ENT_TYPE.POINT, 
+    ENT_TYPE.PLINE, 
+    ENT_TYPE.PGON, 
+]);
+// -------------------------------------------------------------------------------------------------
+// ENT_TYPES FOR TOPOLOGY
+export const _TOPO_ENT_TYPES: Set<ENT_TYPE> = new Set([
+    ENT_TYPE.VERT, 
+    ENT_TYPE.EDGE, 
+    ENT_TYPE.WIRE
+]);
+// -------------------------------------------------------------------------------------------------
+// ENT_TYPES
+export const _ALL_ENT_TYPES: Set<ENT_TYPE> = new Set([
+    ENT_TYPE.POSI,
+    ENT_TYPE.VERT, 
+    ENT_TYPE.EDGE, 
+    ENT_TYPE.WIRE, 
+    ENT_TYPE.POINT, 
+    ENT_TYPE.PLINE, 
+    ENT_TYPE.PGON, 
+    ENT_TYPE.COLL
+]);
 // =================================================================================================
 // CLASS
 // =================================================================================================
 export class Sim {
     private graph: Graph;
     private model_attribs: Map<string, any>;
+    private del: Delete;
     // ---------------------------------------------------------------------------------------------
     /**
      * CONSTRUCTOR
      */
     constructor() {
-        // graph
         this.graph = new Graph();
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ENTITY); // many to many
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.ATTRIB); // many to one
-        this.graph.addEdgeType(_GRAPH_EDGE_TYPE.META, false); // one to many
+        this.del = new Delete(this.graph, this);
+        // graph
+        this.graph.addEdgeType(_GR_EDGE_TYPE.ENTITY); // many to many
+        this.graph.addEdgeType(_GR_EDGE_TYPE.ATTRIB); // many to one
+        this.graph.addEdgeType(_GR_EDGE_TYPE.META, false); // one to many
         // create nodes for ents and attribs
         for (const ent_type of 
-                [ENT_TYPE.POSIS, ENT_TYPE.VERTS, ENT_TYPE.EDGES, ENT_TYPE.WIRES, 
-                ENT_TYPE.POINTS, ENT_TYPE.PLINES, ENT_TYPE.PGONS, ENT_TYPE.COLLS]) {
-            this.graph.addNode(_GRAPH_ENTS_NODE.get(ent_type));
-            this.graph.addNode(_GRAPH_ATTRIBS_NODE.get(ent_type));
+                [ENT_TYPE.POSI, ENT_TYPE.VERT, ENT_TYPE.EDGE, ENT_TYPE.WIRE, 
+                ENT_TYPE.POINT, ENT_TYPE.PLINE, ENT_TYPE.PGON, ENT_TYPE.COLL]) {
+            this.graph.addNode(_GR_ENT_NODE.get(ent_type));
+            this.graph.addNode(_GR_ATTRIB_NODE.get(ent_type));
         }
         // add xyz attrib
-        this._graphAddAttrib(ENT_TYPE.POSIS, 'xyz', DATA_TYPE.LIST);
+        this._graphAddAttrib(ENT_TYPE.POSI, 'xyz', DATA_TYPE.LIST);
         // add empty model attrbutes map
         this.model_attribs = new Map();
     }
@@ -238,16 +273,19 @@ export class Sim {
      * @param ent_type 
      * @returns 
      */
-     private _graphAddEnt(ent_type: ENT_TYPE): string {
-        const ent_type_node: string = _GRAPH_ENTS_NODE.get(ent_type);
+     private _graphAddEnt(ent_type: ENT_TYPE, obj_type: OBJ_TYPE = null): string {
+        const ent_type_node: string = _GR_ENT_NODE.get(ent_type);
         // create the node name, from prefix and then next count number
-        const ent_i: number = this.graph.degreeOut(ent_type_node, _GRAPH_EDGE_TYPE.META);
+        const ent_i: number = this.graph.degreeOut(ent_type_node, _GR_EDGE_TYPE.META);
         const ent: string = ent_type + ent_i;
         // add a node with name `ent`
         this.graph.addNode(ent);
-        this.graph.setNodeProp(ent, 'ent_type', ent_type); // the type of entity, `posi`, `vert`, etc
+        this.graph.setNodeProp(ent, 'ent_type', ent_type); 
+        if (obj_type !== null) {
+            this.graph.setNodeProp(ent, 'obj_type', obj_type); 
+        }
         // create an edge from the `ent_type` to the new ent
-        this.graph.addEdge(ent_type_node, ent, _GRAPH_EDGE_TYPE.META);
+        this.graph.addEdge(ent_type_node, ent, _GR_EDGE_TYPE.META);
         // return the name of the new entity node
         return ent;
     }
@@ -270,7 +308,7 @@ export class Sim {
         this.graph.setNodeProp(att, 'data_type', data_type); // the data type of this attribute
         // create an edge from the node `ent_type_attribs` (e.g. posis_attribs) to the new attrib node
         // the edge type is `meta`
-        this.graph.addEdge(_GRAPH_ATTRIBS_NODE.get(ent_type), att, _GRAPH_EDGE_TYPE.META);
+        this.graph.addEdge(_GR_ATTRIB_NODE.get(ent_type), att, _GR_EDGE_TYPE.META);
         // create a new edge type for this attrib
         this.graph.addEdgeType(att); // many to one
         // return the name of the new attrib node
@@ -285,7 +323,7 @@ export class Sim {
      * @returns The ID of the new position.
      */
     public addPosi(xyz: Txyz): string {
-        const posi: string = this._graphAddEnt(ENT_TYPE.POSIS);
+        const posi: string = this._graphAddEnt(ENT_TYPE.POSI);
         this.setAttribVal(posi, "xyz", xyz);
         return posi;
     }
@@ -296,10 +334,8 @@ export class Sim {
      * @returns The ID of the new point.
      */
     public addPoint(posi: string): string {
-        const vert: string = this._graphAddEnt(ENT_TYPE.VERTS);
-        const point: string = this._graphAddEnt(ENT_TYPE.POINTS);
-        this.graph.addEdge(vert, posi, _GRAPH_EDGE_TYPE.ENTITY);
-        this.graph.addEdge(point, vert, _GRAPH_EDGE_TYPE.ENTITY);
+        const point: string = this._graphAddEnt(ENT_TYPE.POINT);
+        this.graph.addEdge(point, posi, _GR_EDGE_TYPE.ENTITY);
         return point;
     }
     // ---------------------------------------------------------------------------------------------
@@ -313,35 +349,37 @@ export class Sim {
             throw new Error('Too few positions for polyline.');
         }
         // pline
-        const pline = this._graphAddEnt(ENT_TYPE.PLINES);
-        this._addEdgeSeq(posis, posis.length - 1, posis[0] === posis[posis.length - 1], pline);
+        const pline = this._graphAddEnt(ENT_TYPE.PLINE);
+        const closed: boolean = posis[0] === posis[posis.length - 1];
+        this._addEdgeSeq(posis, posis.length - 1, closed, OBJ_TYPE.PLINE, pline);
         //  return
         return pline;
     }
-    private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, parent: string) {
+    private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, 
+            obj_type: OBJ_TYPE, parent: string) {
         const num_verts: number = closed ? num_edges : num_edges + 1;
         let v0: string, v1: string, edge: string;
         // v0
-        const v_start: string = this._graphAddEnt(ENT_TYPE.VERTS);
-        this.graph.addEdge(v_start, posis[0], _GRAPH_EDGE_TYPE.ENTITY);
+        const v_start: string = this._graphAddEnt(ENT_TYPE.VERT, obj_type);
+        this.graph.addEdge(v_start, posis[0], _GR_EDGE_TYPE.ENTITY);
         v0 = v_start;
         for (let i = 1; i < num_verts; i++) {
             // v1
-            v1 = this._graphAddEnt(ENT_TYPE.VERTS);
-            this.graph.addEdge(v1, posis[i], _GRAPH_EDGE_TYPE.ENTITY);
+            v1 = this._graphAddEnt(ENT_TYPE.VERT, obj_type);
+            this.graph.addEdge(v1, posis[i], _GR_EDGE_TYPE.ENTITY);
             // edge
-            edge = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(parent, edge, _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v0, _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENTITY);
+            edge = this._graphAddEnt(ENT_TYPE.EDGE, obj_type);
+            this.graph.addEdge(parent, edge, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v0, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v1, _GR_EDGE_TYPE.ENTITY);
             v0 = v1;
         }
         // last edge
         if (closed) {
-            edge = this._graphAddEnt(ENT_TYPE.EDGES);
-            this.graph.addEdge(parent, edge, _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v1, _GRAPH_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v_start, _GRAPH_EDGE_TYPE.ENTITY);
+            edge = this._graphAddEnt(ENT_TYPE.EDGE, obj_type);
+            this.graph.addEdge(parent, edge, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v1, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v_start, _GR_EDGE_TYPE.ENTITY);
         }
     }
     // ---------------------------------------------------------------------------------------------
@@ -355,11 +393,11 @@ export class Sim {
             throw new Error('Too few positions for polygon.');
         }
         // pgon and wire
-        const pgon = this._graphAddEnt(ENT_TYPE.PGONS);
-        const wire = this._graphAddEnt(ENT_TYPE.WIRES);
-        this.graph.addEdge(pgon, wire, _GRAPH_EDGE_TYPE.ENTITY);
+        const pgon = this._graphAddEnt(ENT_TYPE.PGON);
+        const wire = this._graphAddEnt(ENT_TYPE.WIRE);
+        this.graph.addEdge(pgon, wire, _GR_EDGE_TYPE.ENTITY);
         // verts and edges
-        this._addEdgeSeq(posis, posis.length, true, wire);
+        this._addEdgeSeq(posis, posis.length, true, OBJ_TYPE.PGON, wire);
         //  return
         return pgon;
     }
@@ -375,10 +413,10 @@ export class Sim {
             throw new Error('Too few positions for polygon.');
         }
         // wire
-        const wire = this._graphAddEnt(ENT_TYPE.WIRES);
-        this.graph.addEdge(pgon, wire, _GRAPH_EDGE_TYPE.ENTITY);
+        const wire = this._graphAddEnt(ENT_TYPE.WIRE);
+        this.graph.addEdge(pgon, wire, _GR_EDGE_TYPE.ENTITY);
         // verts and edges
-        this._addEdgeSeq(posis, posis.length, true, wire);
+        this._addEdgeSeq(posis, posis.length, true, OBJ_TYPE.PGON_HOLE, wire);
         //  return
         return wire;
     }
@@ -388,7 +426,7 @@ export class Sim {
      * @returns The ID of the collection.
      */
     public addColl(): string {
-        return this._graphAddEnt(ENT_TYPE.COLLS);
+        return this._graphAddEnt(ENT_TYPE.COLL);
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -400,10 +438,30 @@ export class Sim {
      */
     public addCollEnt(coll: string, ent: string): void {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
-        if (!_COLL_ENT_TYPES.includes(ent_type)) {
+        if (!_COLL_ENT_TYPES.has(ent_type)) {
             throw new Error('Invalid entitiy for collections.');
         }
-        this.graph.addEdge(coll, ent, _GRAPH_EDGE_TYPE.ENTITY);
+        this.graph.addEdge(coll, ent, _GR_EDGE_TYPE.ENTITY);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Make a copy of an entity
+     * @param ent The ID of the entity to copy.
+     * @returns The ID of the copied entity.
+     */
+    public copyEnt(ent: string): string {
+        // TODO
+        throw new Error('Not implemented.');
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Make a clone of an entity, and delete the original.
+     * @param ent The ID of the entity to clone.
+     * @returns The ID of the cloned entity.
+     */
+     public cloneEnt(ent: string): string {
+        // TODO
+        throw new Error('Not implemented.');
     }
     // =============================================================================================
     // ATTRIBUTE METHODS
@@ -441,7 +499,7 @@ export class Sim {
      * @returns A list of attrib names.
      */
     public getAttribs(ent_type: ENT_TYPE): string[]  {
-        return this.graph.successors(_GRAPH_ATTRIBS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)
+        return this.graph.successors(_GR_ATTRIB_NODE.get(ent_type), _GR_EDGE_TYPE.META)
             .map( att => this.graph.getNodeProp(att, 'name') );
     }
     // ---------------------------------------------------------------------------------------------
@@ -476,7 +534,7 @@ export class Sim {
             this.graph.setNodeProp(att_val_node, 'value', att_value);
         }
         // add an edge from the att_val_node to the attrib
-        this.graph.addEdge(att_val_node, att, _GRAPH_EDGE_TYPE.ATTRIB); // att_val -> att
+        this.graph.addEdge(att_val_node, att, _GR_EDGE_TYPE.ATTRIB); // att_val -> att
         // add and edge from the ent to the att_val_node
         this.graph.delEdge(ent, null, att);
         this.graph.addEdge(ent, att_val_node, att); // ent -> att_val; ent <- att_val;
@@ -493,9 +551,24 @@ export class Sim {
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         const att_vals: string[] = this.graph.successors(ent, att);
         if (att_vals.length === 0) {
-            return null;
+            return null; // TDOD should this be undefined?
         }
         return this.graph.getNodeProp(att_vals[0], 'value');
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Delete an attribute value from an entity in the model, specifying the attribute name.
+     * @param ent  The ID of the entity for which to get the attribute value.
+     * @param att_name The name of the attribute to delete.
+     */
+     public delAttribVal(ent: string, att_name: string): void {
+        const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
+        const att: string = this._graphAttribNodeName(ent_type, att_name);
+        const att_vals: string[] = this.graph.successors(ent, att);
+        if (att_vals.length === 0) {
+            return;
+        }
+        this.graph.delEdge(ent, att_vals[0], att);
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -506,7 +579,7 @@ export class Sim {
      */
     public getAttribVals(ent_type: ENT_TYPE, att_name: string): TAttribDataTypes[] {
         const att: string = this._graphAttribNodeName(ent_type, att_name);
-        const att_vals: string[] = this.graph.predecessors(att, _GRAPH_EDGE_TYPE.ATTRIB);
+        const att_vals: string[] = this.graph.predecessors(att, _GR_EDGE_TYPE.ATTRIB);
         const values: TAttribDataTypes[] = [];
         for (const att_val of att_vals) {
             values.push(this.graph.getNodeProp(att_val, 'value'));
@@ -565,7 +638,7 @@ export class Sim {
         return Array.from(this.model_attribs.keys());
     }
     // =============================================================================================
-    // GET METHODS FOR ENTITIES
+    // METHODS FOR ENTITIES
     // =============================================================================================
     /**
      * Get the number of entities of the specified entity type.  
@@ -574,8 +647,8 @@ export class Sim {
      */
     public numEnts(ent_type: ENT_TYPE): number {
         return this.graph.degreeOut(
-            _GRAPH_ENTS_NODE.get(ent_type), 
-            _GRAPH_EDGE_TYPE.META
+            _GR_ENT_NODE.get(ent_type), 
+            _GR_EDGE_TYPE.META
         )
     }
     // ---------------------------------------------------------------------------------------------
@@ -596,8 +669,8 @@ export class Sim {
     public getEnts(target_ent_type: ENT_TYPE, source_ents: string|string[] = null): string[] {
         if (source_ents === null) {
             return this.graph.successors(
-                _GRAPH_ENTS_NODE.get(target_ent_type), 
-                _GRAPH_EDGE_TYPE.META
+                _GR_ENT_NODE.get(target_ent_type), 
+                _GR_EDGE_TYPE.META
             );
         }
         // not a list
@@ -607,8 +680,8 @@ export class Sim {
         // a list with one zero or one item
         if (source_ents.length === 0) {
             return this.graph.successors(
-                _GRAPH_ENTS_NODE.get(target_ent_type), 
-                _GRAPH_EDGE_TYPE.META
+                _GR_ENT_NODE.get(target_ent_type), 
+                _GR_EDGE_TYPE.META
             );
         } else if (source_ents.length === 1) {
             return this._navigate(target_ent_type, source_ents[0]);
@@ -623,31 +696,41 @@ export class Sim {
         return Array.from(ents_set);
     }
     private _getEntSeq(target_ent_type: ENT_TYPE, source_ent_type: ENT_TYPE): Map<string, number> {
-        if (target_ent_type === ENT_TYPE.POINTS || source_ent_type === ENT_TYPE.POINTS) {
-            return _ENT_SEQ_COLL_POINT_POSI;
-        } else if (target_ent_type === ENT_TYPE.PLINES || source_ent_type === ENT_TYPE.PLINES) {
-            return _ENT_SEQ_COLL_PLINE_POSI;
-        } else if (target_ent_type === ENT_TYPE.PGONS || source_ent_type === ENT_TYPE.PGONS) {
-            return _ENT_SEQ_COLL_PGON_POSI;
+        if (target_ent_type === ENT_TYPE.POINT || source_ent_type === ENT_TYPE.POINT) {
+            return _ENT_SEQ_CO_PT_PO;
+        } else if (target_ent_type === ENT_TYPE.PLINE || source_ent_type === ENT_TYPE.PLINE) {
+            return _ENT_SEQ_CO_PL_PO;
+        } else if (target_ent_type === ENT_TYPE.PGON || source_ent_type === ENT_TYPE.PGON) {
+            return _ENT_SEQ_CO_PG_PO;
         }
         return _ENT_SEQ
     }
     private _navigate(target_ent_type: ENT_TYPE, source_ent: string): string[] {
-        if (target_ent_type === ENT_TYPE.COLLS_S || target_ent_type === ENT_TYPE.COLLS_P) {
+        if (target_ent_type === ENT_TYPE.COLL_SUCC || target_ent_type === ENT_TYPE.COLL_PRED) {
             return this._navigateColls(target_ent_type, source_ent);
         }
         const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
-        const ent_seq: Map<string, number> = this._getEntSeq(target_ent_type, source_ent_type);
+        // zero step navigation
         if (source_ent_type === target_ent_type) {
             return [source_ent];
         }
+        // get navigation distance, positive = down, ngative = up
+        const ent_seq: Map<string, number> = this._getEntSeq(target_ent_type, source_ent_type);
         const dist: number = ent_seq.get(source_ent_type) - ent_seq.get(target_ent_type);
-        if (dist === 1) {
-            return this.graph.successors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
+        // single step navigation
+        if (dist === 1 || dist === -1) {
+            const nav_ents: string[] = dist > 0 ?
+                this.graph.successors(source_ent, _GR_EDGE_TYPE.ENTITY) : 
+                this.graph.predecessors(source_ent, _GR_EDGE_TYPE.ENTITY);
+            if (nav_ents.length > 0) {
+                const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ents[0], 'ent_type');
+                if (nav_ent_type === target_ent_type) {
+                    return nav_ents;
+                }
+            }
+            return [];
         }
-        if (dist === -1) {
-            return this.graph.predecessors(source_ent, _GRAPH_EDGE_TYPE.ENTITY);
-        }
+        // multi step navigation
         let ents: string[] = [source_ent];
         const result_set: Set<string> = new Set();
         let ents_set: Set<string>;
@@ -656,13 +739,13 @@ export class Sim {
             ents_set = new Set();
             for (const ent of ents) {
                 const nav_ents: string[] = dist > 0 ?
-                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
-                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
+                    this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY) : 
+                    this.graph.predecessors(ent, _GR_EDGE_TYPE.ENTITY);
                 for (const nav_ent of nav_ents) {
                     const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
                     if (nav_ent_type === target_ent_type) {
                         result_set.add(nav_ent);
-                        if (target_ent_type === ENT_TYPE.COLLS) {
+                        if (target_ent_type === ENT_TYPE.COLL) {
                             ents_set.add(nav_ent);
                         }
                     } else if (ent_seq.has(nav_ent_type)) {
@@ -680,7 +763,7 @@ export class Sim {
     }
     private _navigateColls(target_ent_type: ENT_TYPE, source_ent: string): string[] {
         const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
-        if (source_ent_type !== ENT_TYPE.COLLS) {
+        if (source_ent_type !== ENT_TYPE.COLL) {
             throw new Error('Source entity must be a collection.');
         }
         let ents: string[] = [source_ent];
@@ -690,12 +773,12 @@ export class Sim {
             // colls_set.clear(); // avoid garbage collection
             colls_set = new Set();
             for (const ent of ents) {
-                const nav_ents: string[] = target_ent_type === ENT_TYPE.COLLS_S ? 
-                    this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY) : 
-                    this.graph.predecessors(ent, _GRAPH_EDGE_TYPE.ENTITY);
+                const nav_ents: string[] = target_ent_type === ENT_TYPE.COLL_SUCC ? 
+                    this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY) : 
+                    this.graph.predecessors(ent, _GR_EDGE_TYPE.ENTITY);
                 for (const nav_ent of nav_ents) {
                     const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
-                    if (nav_ent_type === ENT_TYPE.COLLS) {
+                    if (nav_ent_type === ENT_TYPE.COLL) {
                         result_set.add(nav_ent);
                         colls_set.add(nav_ent);
                     }
@@ -719,78 +802,67 @@ export class Sim {
      */
      public getSubEnts(ents: string|string[]): TEntSets {
         const ent_sets: Map<ENT_TYPE, Set<string>> = new Map([
-            [ENT_TYPE.POSIS, new Set()],
-            [ENT_TYPE.VERTS, new Set()],
-            [ENT_TYPE.EDGES, new Set()],
-            [ENT_TYPE.WIRES, new Set()],
-            [ENT_TYPE.POINTS, new Set()],
-            [ENT_TYPE.PLINES, new Set()],
-            [ENT_TYPE.PGONS, new Set()],
-            [ENT_TYPE.COLLS, new Set()],
+            [ENT_TYPE.POSI, new Set()],
+            [ENT_TYPE.VERT, new Set()],
+            [ENT_TYPE.EDGE, new Set()],
+            [ENT_TYPE.WIRE, new Set()],
+            [ENT_TYPE.POINT, new Set()],
+            [ENT_TYPE.PLINE, new Set()],
+            [ENT_TYPE.PGON, new Set()],
+            [ENT_TYPE.COLL, new Set()],
         ]);
         if (!Array.isArray(ents)) { ents = [ents]; }
         for (const ent of ents) {
             const ent_type = this.graph.getNodeProp(ent, 'ent_type');
-            if (ent_type === ENT_TYPE.POSIS) {
-                ent_sets.get(ENT_TYPE.POSIS).add(ent);
-            } else if (ent_type === ENT_TYPE.POINTS) {
+            if (ent_type === ENT_TYPE.POSI) {
+                ent_sets.get(ENT_TYPE.POSI).add(ent);
+            } else if (ent_type === ENT_TYPE.POINT) {
                 this._getPointSubEnts(ent, ent_sets);
-            } else if (ent_type === ENT_TYPE.PLINES) {
+            } else if (ent_type === ENT_TYPE.PLINE) {
                 this._getPlineSubEnts(ent, ent_sets);
-            } else if (ent_type === ENT_TYPE.PGONS) {
+            } else if (ent_type === ENT_TYPE.PGON) {
                 this._getPgonSubEnts(ent, ent_sets);
-            } else if (ent_type === ENT_TYPE.COLLS) {
-                ent_sets.get(ENT_TYPE.COLLS).add(ent);
-                for (const point of this.getEnts(ENT_TYPE.POINTS, ent)) {
+            } else if (ent_type === ENT_TYPE.COLL) {
+                ent_sets.get(ENT_TYPE.COLL).add(ent);
+                for (const point of this.getEnts(ENT_TYPE.POINT, ent)) {
                     this._getPointSubEnts(point, ent_sets);
                 }
-                for (const pline of this.getEnts(ENT_TYPE.PLINES, ent)) {
+                for (const pline of this.getEnts(ENT_TYPE.PLINE, ent)) {
                     this._getPlineSubEnts(pline, ent_sets);
                 }
-                for (const pgon of this.getEnts(ENT_TYPE.PGONS, ent)) {
+                for (const pgon of this.getEnts(ENT_TYPE.PGON, ent)) {
                     this._getPgonSubEnts(pgon, ent_sets);
                 }
-                for (const child_coll of this.getEnts(ENT_TYPE.COLLS, ent)) {
-                    ent_sets.get(ENT_TYPE.COLLS).add(child_coll);
+                for (const child_coll of this.getEnts(ENT_TYPE.COLL, ent)) {
+                    ent_sets.get(ENT_TYPE.COLL).add(child_coll);
                 }
             } else {
                 throw new Error('Entity type not supported: ' + ent_type);
             }
         }
-        return new Map([
-            [ENT_TYPE.POSIS, Array.from(ent_sets.get(ENT_TYPE.POSIS))],
-            [ENT_TYPE.VERTS, Array.from(ent_sets.get(ENT_TYPE.VERTS))],
-            [ENT_TYPE.EDGES, Array.from(ent_sets.get(ENT_TYPE.EDGES))],
-            [ENT_TYPE.WIRES, Array.from(ent_sets.get(ENT_TYPE.WIRES))],
-            [ENT_TYPE.POINTS, Array.from(ent_sets.get(ENT_TYPE.POINTS))],
-            [ENT_TYPE.PLINES, Array.from(ent_sets.get(ENT_TYPE.PLINES))],
-            [ENT_TYPE.PGONS, Array.from(ent_sets.get(ENT_TYPE.PGONS))],
-            [ENT_TYPE.COLLS, Array.from(ent_sets.get(ENT_TYPE.COLLS))],
-        ]);
+        return ent_sets;
     }
     private _getPointSubEnts(point: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
-        ent_sets.get(ENT_TYPE.POINTS).add(point);
-        const vert = this.getEnts(ENT_TYPE.VERTS, point)[0];
-        ent_sets.get(ENT_TYPE.VERTS).add(vert);
-        ent_sets.get(ENT_TYPE.POSIS).add(this.getEnts(ENT_TYPE.POSIS, vert)[0]);
+        ent_sets.get(ENT_TYPE.POINT).add(point);
+        ent_sets.get(ENT_TYPE.POSI).add(this.getEnts(ENT_TYPE.POSI, point)[0]);
     }
     private _getPlineSubEnts(pline: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
-        ent_sets.get(ENT_TYPE.PLINES).add(pline);
-        this.getEnts(ENT_TYPE.EDGES, pline).map(edge => ent_sets.get(ENT_TYPE.EDGES).add(edge));
-        for (const vert of this.getEnts(ENT_TYPE.VERTS, pline)) {
-            ent_sets.get(ENT_TYPE.VERTS).add(vert);
-            ent_sets.get(ENT_TYPE.POSIS).add(this.getEnts(ENT_TYPE.POSIS, vert)[0]);
+        ent_sets.get(ENT_TYPE.PLINE).add(pline);
+        this.getEnts(ENT_TYPE.EDGE, pline).map(edge => ent_sets.get(ENT_TYPE.EDGE).add(edge));
+        for (const vert of this.getEnts(ENT_TYPE.VERT, pline)) {
+            ent_sets.get(ENT_TYPE.VERT).add(vert);
+            ent_sets.get(ENT_TYPE.POSI).add(this.getEnts(ENT_TYPE.POSI, vert)[0]);
         }
     }
     private _getPgonSubEnts(pgon: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
-        ent_sets.get(ENT_TYPE.PGONS).add(pgon);
-        const wires = this.getEnts(ENT_TYPE.WIRES, pgon);
+        ent_sets.get(ENT_TYPE.PGON).add(pgon);
+        const wires = this.getEnts(ENT_TYPE.WIRE, pgon);
         for (const wire of wires) {
-            ent_sets.get(ENT_TYPE.WIRES).add(wire);
-            this.getEnts(ENT_TYPE.EDGES, wire).map(edge => ent_sets.get(ENT_TYPE.EDGES).add(edge));
-            for (const vert of this.getEnts(ENT_TYPE.VERTS, wire)) {
-                ent_sets.get(ENT_TYPE.VERTS).add(vert);
-                ent_sets.get(ENT_TYPE.POSIS).add(this.getEnts(ENT_TYPE.POSIS, vert)[0]);
+            ent_sets.get(ENT_TYPE.WIRE).add(wire);
+            this.getEnts(ENT_TYPE.EDGE, wire).map(edge => ent_sets.get(ENT_TYPE.EDGE).add(edge));
+            for (const vert of this.getEnts(ENT_TYPE.VERT, wire)) {
+                ent_sets.get(ENT_TYPE.VERT).add(vert);
+                ent_sets.get(ENT_TYPE.POSI).add(this.getEnts(ENT_TYPE.POSI, vert)[0]);
             }
         }
     }
@@ -806,41 +878,40 @@ export class Sim {
      */
     public getEntPosis(ent: string): string|string[]|string[][] {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
-        if ( ent_type === ENT_TYPE.POSIS ) {
+        if ( ent_type === ENT_TYPE.POSI ) {
             return ent;
-        } else if ( ent_type === ENT_TYPE.VERTS) {
-            return this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0];
-        } else if ( ent_type === ENT_TYPE.EDGES ) {
-            const verts: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY);
-            return verts.map(vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
-        } else if ( ent_type === ENT_TYPE.WIRES) {
-            const edges: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)
+        } else if ( ent_type === ENT_TYPE.VERT) {
+            return this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY)[0];
+        } else if ( ent_type === ENT_TYPE.EDGE ) {
+            const verts: string[] = this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY);
+            return verts.map(vert => this.graph.successors(vert, _GR_EDGE_TYPE.ENTITY)[0]);
+        } else if ( ent_type === ENT_TYPE.WIRE) {
+            const edges: string[] = this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY)
             return this._getEdgeSeqPosis(edges, false);
-        } else if ( ent_type === ENT_TYPE.POINTS ) {
-            const vert: string = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)[0];
-            return this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
-        } else if ( ent_type === ENT_TYPE.PLINES ) {
-            const edges: string[] = this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)
+        } else if ( ent_type === ENT_TYPE.POINT ) {
+            return this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY)[0];
+        } else if ( ent_type === ENT_TYPE.PLINE ) {
+            const edges: string[] = this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY)
             return this._getEdgeSeqPosis(edges, true);
-        } else if ( ent_type === ENT_TYPE.PGONS ) {
+        } else if ( ent_type === ENT_TYPE.PGON ) {
             const posis: string[][] = [];
-            for (const wire of this.graph.successors(ent, _GRAPH_EDGE_TYPE.ENTITY)) {
-                const edges: string[] = this.graph.successors(wire, _GRAPH_EDGE_TYPE.ENTITY);
+            for (const wire of this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY)) {
+                const edges: string[] = this.graph.successors(wire, _GR_EDGE_TYPE.ENTITY);
                 posis.push(this._getEdgeSeqPosis(edges, false));
             }
             return posis;
-        } else if ( ent_type === ENT_TYPE.COLLS ) {
+        } else if ( ent_type === ENT_TYPE.COLL ) {
             throw new Error('Not implemented'); // TODO
         }
     }
     private _getEdgeSeqPosis(edges: string[], add_last: boolean): string[] {
         const verts: string[] = edges.map( 
-            edge => this.graph.successors(edge, _GRAPH_EDGE_TYPE.ENTITY)[0]);
+            edge => this.graph.successors(edge, _GR_EDGE_TYPE.ENTITY)[0]);
         const posis: string[] = verts.map( 
-            vert => this.graph.successors(vert, _GRAPH_EDGE_TYPE.ENTITY)[0]);
+            vert => this.graph.successors(vert, _GR_EDGE_TYPE.ENTITY)[0]);
         if (add_last) {
-            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1];
-            const last_posi: string = this.graph.successors(last_vert, _GRAPH_EDGE_TYPE.ENTITY)[0];
+            const last_vert: string = this.graph.successors(edges[edges.length - 1], _GR_EDGE_TYPE.ENTITY)[1];
+            const last_posi: string = this.graph.successors(last_vert, _GR_EDGE_TYPE.ENTITY)[0];
             posis.push(last_posi);
         }
         return posis;
@@ -856,7 +927,7 @@ export class Sim {
      * @returns The XYZ coordinates.
      */
     public getEntCoords(ent: string): Txyz|Txyz[]|Txyz[][] { 
-        const xyz_att: string = this._graphAttribNodeName(ENT_TYPE.POSIS, 'xyz');
+        const xyz_att: string = this._graphAttribNodeName(ENT_TYPE.POSI, 'xyz');
         const posis: string|string[]|string[][] = this.getEntPosis(ent);
         if (!Array.isArray(posis)) {
             const att_val: string = this.graph.successors(posis, xyz_att)[0];
@@ -882,9 +953,31 @@ export class Sim {
         }
         return coords_arr;
     }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Delete a set of entities. Unused posis will also be deleted.
+     * For positions, the connected entities will be deleted.
+     * For collections, the contents of the collection will not be deleted.
+     * @param ents A list of entity IDs.
+     * @param invert If true, then the list of entities wil be inverted.
+     * @returns The ID of the new entity.
+     */
+    public delEnts(ents: string[] = null, invert: boolean = false): void {
+        this.del.delEnts(ents, invert);
+    }
     // =============================================================================================
     // QUERY
     // =============================================================================================
+    /**
+     * Return true if teh entity exists in teh current snapshot.
+     * @param ent An entity ID.
+     * @returns True if it exists, false otherwise.
+     */
+     public entExists(ent: string): boolean { 
+        const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
+        return this.graph.hasEdge(_GR_ENT_NODE.get(ent_type), ent, _GR_EDGE_TYPE.META);
+    }
+    // ---------------------------------------------------------------------------------------------
     /**
      * Return the entity type of an entity in the model
      * @param ent An entity ID.
@@ -913,7 +1006,7 @@ export class Sim {
         if (comparator === COMPARATOR.IS_EQUAL && att_val === null) {
             const set_with_val: Set<string> = new Set(this.graph.getNodesWithOutEdge(att));
             const set_all: Set<string> = new Set(
-                this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META));
+                this.graph.successors(_GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META));
             return Array.from(set_all).filter(item => !set_with_val.has(item));
         }
         // val !== null
@@ -932,15 +1025,15 @@ export class Sim {
         if (comparator === '!=') {
             const att_val_node: string = this._graphAttribValNodeName(att_val)
             if (!this.graph.hasNode(att_val_node)) {
-                return this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META);
+                return this.graph.successors(_GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META);
             }
             const ents_equal: string[] = this.graph.predecessors(att_val_node, att);
             if (ents_equal.length === 0) {
-                return this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META);
+                return this.graph.successors(_GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META);
             }
             const set_equal: Set<string> = new Set(ents_equal)
             const set_all: Set<string> = new Set(
-                this.graph.successors(_GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META));
+                this.graph.successors(_GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META));
             return Array.from(set_all).filter(item => !set_equal.has(item));
         }
         // other cases, data_type must be a number
@@ -953,7 +1046,7 @@ export class Sim {
         // val < att_val
         if (comparator === COMPARATOR.IS_LESS) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
+                _GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') < att_val) {
                     result.push(ent)
@@ -963,7 +1056,7 @@ export class Sim {
         // val <= att_val
         else if (comparator === COMPARATOR.IS_LESS_OR_EQUAL) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
+                _GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') <= att_val) {
                     result.push(ent);
@@ -973,7 +1066,7 @@ export class Sim {
         // val > att_val
         else if (comparator === COMPARATOR.IS_GREATER) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
+                _GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') > att_val) {
                     result.push(ent);
@@ -983,7 +1076,7 @@ export class Sim {
         // val >= att_val
         else if (comparator === COMPARATOR.IS_GREATER_OR_EQUAL) {
             for (const ent of this.graph.successors(
-                _GRAPH_ENTS_NODE.get(ent_type), _GRAPH_EDGE_TYPE.META)) {
+                _GR_ENT_NODE.get(ent_type), _GR_EDGE_TYPE.META)) {
                 const val = this.graph.successors(ent, att)[0];
                 if (val !== undefined && this.graph.getNodeProp(val, 'value') >= att_val) {
                     result.push(ent);
@@ -1001,12 +1094,50 @@ export class Sim {
      * @returns True if closed, false if open.
      */
      public isPlineClosed(pline: string): boolean { 
-        const edges: string[] = this.graph.successors(pline, _GRAPH_EDGE_TYPE.ENTITY);
+        const edges: string[] = this.graph.successors(pline, _GR_EDGE_TYPE.ENTITY);
         const start_posi: string = this.graph.successors(
-            this.graph.successors(edges[0], _GRAPH_EDGE_TYPE.ENTITY)[0], _GRAPH_EDGE_TYPE.ENTITY)[0];
+            this.graph.successors(edges[0], _GR_EDGE_TYPE.ENTITY)[0], _GR_EDGE_TYPE.ENTITY)[0];
         const end_posi: string = this.graph.successors(
-            this.graph.successors(edges[edges.length - 1], _GRAPH_EDGE_TYPE.ENTITY)[1], _GRAPH_EDGE_TYPE.ENTITY)[0];
+            this.graph.successors(edges[edges.length - 1], _GR_EDGE_TYPE.ENTITY)[1], _GR_EDGE_TYPE.ENTITY)[0];
         return start_posi === end_posi;
+    }
+    // =============================================================================================
+    // SNAPSHOTS 
+    // =============================================================================================
+    /**
+     * Get the active snapshot.
+     * @returns The ID of teh currently active snapshot.
+     */
+     public getActiveSnapshot(): number { 
+        return this.graph.getActiveSnapshot();
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Set the active snapshot.
+     * @returns The ID of the currently active snapshot.
+     */
+     public setActiveSnapshot(ssid: number): void { 
+        return this.graph.setActiveSnapshot(ssid);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Start a new snapshot of the edges .
+     * If `ssid` is null, the the new snapshot will be empty.
+     * @param ssid: A snapshot ID to intialise the new snapshot.
+     * @returns An integer, the ssid of the new snapshot.
+     */
+     public newSnapshot(ssid: number = null): number { 
+        return this.graph.newSnapshot(ssid);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Copy a set of edges from another snapshot into the current active snapshot.
+     * @param edge_type The type of edges to copy.
+     * @param ssid The snapshot ID to copy from.
+     * @param x2x The relationship between nodes, for clash detection.
+     */
+    public snapshotCopyEdges(edge_type: string, ssid: number, x2x: X2X = X2X.M2M): void {
+        this.graph.snapshotCopyEdges(edge_type, ssid, x2x);
     }
     // =============================================================================================
     // UTILITY 

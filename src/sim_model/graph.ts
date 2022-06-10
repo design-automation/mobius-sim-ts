@@ -200,12 +200,11 @@ export class Graph {
      * Delete the edge from n0 to n1.
      * If `node0` is null, then all edges ending at `node1` will be deleted.
      * If `node1` is null, then all edges starting at `node0` will be deleted.
-     * If no edge exists, then no error is thrown. 
+     * If the edge does not exists, then no error is thrown. 
      * @param node0: The name of the start node.
      * @param node1: The name of the end node, or null.
      * @param edge_type: The edge type.
      * @param ssid: Snapshot ID (optional).
-     * @returns: True if the edge exists, false otherwise.
      */
      public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
         // get ssid
@@ -494,6 +493,14 @@ export class Graph {
      */
     public getActiveSnapshot(): number {
          return this._curr_ssid;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Clear all edges in the current active snapshot.
+     * @returns An integer, the ssid of the active snapshot.
+     */
+    public clearSnapshot(): void {
+        this._edges.set(this._curr_ssid, new Map());
     }
     // ---------------------------------------------------------------------------------------------
     /**

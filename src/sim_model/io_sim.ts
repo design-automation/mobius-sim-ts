@@ -5,14 +5,14 @@ import { readFileSync, writeFileSync } from 'fs';
 // ==================================================================================================
 // entity attribs
 const ent_types: [ENT_TYPE, string][] = [
-    [ENT_TYPE.POSIS,'posis'],
-    [ENT_TYPE.VERTS,'verts'],
-    [ENT_TYPE.EDGES,'edges'],
-    [ENT_TYPE.WIRES,'wires'],
-    [ENT_TYPE.POINTS,'points'],
-    [ENT_TYPE.PLINES,'plines'],
-    [ENT_TYPE.PGONS,'pgons'],
-    [ENT_TYPE.COLLS,'colls']
+    [ENT_TYPE.POSI,'posis'],
+    [ENT_TYPE.VERT,'verts'],
+    [ENT_TYPE.EDGE,'edges'],
+    [ENT_TYPE.WIRE,'wires'],
+    [ENT_TYPE.POINT,'points'],
+    [ENT_TYPE.PLINE,'plines'],
+    [ENT_TYPE.PGON,'pgons'],
+    [ENT_TYPE.COLL,'colls']
 ];
 /**
  * Return JSON representing that data in the SIM model.
@@ -36,7 +36,7 @@ export function exportSimData(sim_model: Sim, ents: string|string[] = null): obj
     }
     // create the geometry data
     const geometry = {
-        'num_posis': ents_i_map.get(ENT_TYPE.POSIS).size,
+        'num_posis': ents_i_map.get(ENT_TYPE.POSI).size,
         'points': [],
         'plines': [],
         'pgons': [],
@@ -45,31 +45,31 @@ export function exportSimData(sim_model: Sim, ents: string|string[] = null): obj
         'coll_pgons':  [],
         'coll_colls': []
     }
-    for (const point_ent of ents_i_map.get(ENT_TYPE.POINTS).keys()) {
+    for (const point_ent of ents_i_map.get(ENT_TYPE.POINT).keys()) {
         const posi: string = sim_model.getEntPosis(point_ent) as string;
-        geometry['points'].push(ents_i_map.get(ENT_TYPE.POSIS).get(posi));
+        geometry['points'].push(ents_i_map.get(ENT_TYPE.POSI).get(posi));
     }
-    for (const pline_ent of ents_i_map.get(ENT_TYPE.PLINES).keys()) {
+    for (const pline_ent of ents_i_map.get(ENT_TYPE.PLINE).keys()) {
         const posis: string[]  = sim_model.getEntPosis(pline_ent) as string[];
-        geometry['plines'].push(posis.map(posi => ents_i_map.get(ENT_TYPE.POSIS).get(posi)));
+        geometry['plines'].push(posis.map(posi => ents_i_map.get(ENT_TYPE.POSI).get(posi)));
     }
-    for (const pgon_ent of ents_i_map.get(ENT_TYPE.PGONS).keys()) {
+    for (const pgon_ent of ents_i_map.get(ENT_TYPE.PGON).keys()) {
         const posis: string[][] = sim_model.getEntPosis(pgon_ent) as string[][];
-        geometry['pgons'].push(posis.map(w_posis => w_posis.map(posi => ents_i_map.get(ENT_TYPE.POSIS).get(posi))));
+        geometry['pgons'].push(posis.map(w_posis => w_posis.map(posi => ents_i_map.get(ENT_TYPE.POSI).get(posi))));
     }
-    for (const coll_ent of ents_i_map.get(ENT_TYPE.COLLS).keys()) {
+    for (const coll_ent of ents_i_map.get(ENT_TYPE.COLL).keys()) {
         // points
-        const coll_points: string[] = sim_model.getEnts(ENT_TYPE.POINTS, coll_ent);
-        geometry['coll_points'].push(coll_points.map(coll_point => ents_i_map.get(ENT_TYPE.POINTS).get(coll_point)));
+        const coll_points: string[] = sim_model.getEnts(ENT_TYPE.POINT, coll_ent);
+        geometry['coll_points'].push(coll_points.map(coll_point => ents_i_map.get(ENT_TYPE.POINT).get(coll_point)));
         // plines
-        const coll_plines: string[] = sim_model.getEnts(ENT_TYPE.PLINES, coll_ent);
-        geometry['coll_plines'].push(coll_plines.map(coll_pline => ents_i_map.get(ENT_TYPE.PLINES).get(coll_pline)));
+        const coll_plines: string[] = sim_model.getEnts(ENT_TYPE.PLINE, coll_ent);
+        geometry['coll_plines'].push(coll_plines.map(coll_pline => ents_i_map.get(ENT_TYPE.PLINE).get(coll_pline)));
         // pgons
-        const coll_pgons: string[] = sim_model.getEnts(ENT_TYPE.PGONS, coll_ent);
-        geometry['coll_pgons'].push(coll_pgons.map(coll_pgon => ents_i_map.get(ENT_TYPE.PGONS).get(coll_pgon)));
+        const coll_pgons: string[] = sim_model.getEnts(ENT_TYPE.PGON, coll_ent);
+        geometry['coll_pgons'].push(coll_pgons.map(coll_pgon => ents_i_map.get(ENT_TYPE.PGON).get(coll_pgon)));
         // colls
-        const coll_colls: string[] = sim_model.getEnts(ENT_TYPE.COLLS, coll_ent);
-        geometry['coll_colls'].push(coll_colls.map(coll_coll => ents_i_map.get(ENT_TYPE.COLLS).get(coll_coll)));
+        const coll_colls: string[] = sim_model.getEnts(ENT_TYPE.COLL, coll_ent);
+        geometry['coll_colls'].push(coll_colls.map(coll_coll => ents_i_map.get(ENT_TYPE.COLL).get(coll_coll)));
     }
     // create the attribute data
     function _attribData(ent_type: ENT_TYPE, ents_dict: Map<string, number>) {
@@ -95,14 +95,14 @@ export function exportSimData(sim_model: Sim, ents: string|string[] = null): obj
         return attribs_data;
     }
     const attributes = {
-        'posis': _attribData(ENT_TYPE.POSIS, ents_i_map.get(ENT_TYPE.POSIS)),
-        'verts': _attribData(ENT_TYPE.VERTS, ents_i_map.get(ENT_TYPE.VERTS)),
-        'edges': _attribData(ENT_TYPE.EDGES, ents_i_map.get(ENT_TYPE.EDGES)),
-        'wires': _attribData(ENT_TYPE.WIRES, ents_i_map.get(ENT_TYPE.WIRES)),
-        'points': _attribData(ENT_TYPE.POINTS, ents_i_map.get(ENT_TYPE.POINTS)),
-        'plines': _attribData(ENT_TYPE.PLINES, ents_i_map.get(ENT_TYPE.PLINES)),
-        'pgons': _attribData(ENT_TYPE.PGONS, ents_i_map.get(ENT_TYPE.PGONS)),
-        'colls': _attribData(ENT_TYPE.COLLS, ents_i_map.get(ENT_TYPE.COLLS)),
+        'posis': _attribData(ENT_TYPE.POSI, ents_i_map.get(ENT_TYPE.POSI)),
+        'verts': _attribData(ENT_TYPE.VERT, ents_i_map.get(ENT_TYPE.VERT)),
+        'edges': _attribData(ENT_TYPE.EDGE, ents_i_map.get(ENT_TYPE.EDGE)),
+        'wires': _attribData(ENT_TYPE.WIRE, ents_i_map.get(ENT_TYPE.WIRE)),
+        'points': _attribData(ENT_TYPE.POINT, ents_i_map.get(ENT_TYPE.POINT)),
+        'plines': _attribData(ENT_TYPE.PLINE, ents_i_map.get(ENT_TYPE.PLINE)),
+        'pgons': _attribData(ENT_TYPE.PGON, ents_i_map.get(ENT_TYPE.PGON)),
+        'colls': _attribData(ENT_TYPE.COLL, ents_i_map.get(ENT_TYPE.COLL)),
         'model': sim_model.getModelAttribs().map(att_name => 
             [att_name, sim_model.getModelAttribVal(att_name)])
     }
@@ -154,21 +154,21 @@ export function importSimData(sim_model: Sim, json_data: object, coll_name: stri
     }
     // get current num entities
     const num_ents: Map<ENT_TYPE, number> = new Map([
-        [ENT_TYPE.POSIS, sim_model.numEnts(ENT_TYPE.POSIS)],
-        [ENT_TYPE.VERTS, sim_model.numEnts(ENT_TYPE.VERTS)],
-        [ENT_TYPE.EDGES, sim_model.numEnts(ENT_TYPE.EDGES)],
-        [ENT_TYPE.WIRES, sim_model.numEnts(ENT_TYPE.WIRES)],
-        [ENT_TYPE.POINTS, sim_model.numEnts(ENT_TYPE.POINTS)],
-        [ENT_TYPE.PLINES, sim_model.numEnts(ENT_TYPE.PLINES)],
-        [ENT_TYPE.PGONS, sim_model.numEnts(ENT_TYPE.PGONS)],
-        [ENT_TYPE.COLLS, sim_model.numEnts(ENT_TYPE.COLLS)]
+        [ENT_TYPE.POSI, sim_model.numEnts(ENT_TYPE.POSI)],
+        [ENT_TYPE.VERT, sim_model.numEnts(ENT_TYPE.VERT)],
+        [ENT_TYPE.EDGE, sim_model.numEnts(ENT_TYPE.EDGE)],
+        [ENT_TYPE.WIRE, sim_model.numEnts(ENT_TYPE.WIRE)],
+        [ENT_TYPE.POINT, sim_model.numEnts(ENT_TYPE.POINT)],
+        [ENT_TYPE.PLINE, sim_model.numEnts(ENT_TYPE.PLINE)],
+        [ENT_TYPE.PGON, sim_model.numEnts(ENT_TYPE.PGON)],
+        [ENT_TYPE.COLL, sim_model.numEnts(ENT_TYPE.COLL)]
     ]);
     // create coll
     let imp_coll: string = null;
     if (coll_name !== null) {
         imp_coll = sim_model.addColl();
-        if (!sim_model.hasAttrib(ENT_TYPE.COLLS, 'name')) {
-            sim_model.addAttrib(ENT_TYPE.COLLS, 'name', DATA_TYPE.STR);
+        if (!sim_model.hasAttrib(ENT_TYPE.COLL, 'name')) {
+            sim_model.addAttrib(ENT_TYPE.COLL, 'name', DATA_TYPE.STR);
 
         }
         sim_model.setAttribVal(imp_coll, 'name', coll_name);
@@ -202,16 +202,16 @@ export function importSimData(sim_model: Sim, json_data: object, coll_name: stri
     for (let i = 0; i < num_colls; i++) {
         const coll = sim_model.addColl();
         for (const point_i of json_data['geometry']['coll_points'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.POINTS + (num_ents.get(ENT_TYPE.POINTS) + point_i));
+            sim_model.addCollEnt(coll, ENT_TYPE.POINT + (num_ents.get(ENT_TYPE.POINT) + point_i));
         }
         for (const pline_i of json_data['geometry']['coll_plines'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.PLINES + (num_ents.get(ENT_TYPE.PLINES) + pline_i));
+            sim_model.addCollEnt(coll, ENT_TYPE.PLINE + (num_ents.get(ENT_TYPE.PLINE) + pline_i));
         }
         for (const pgon_i of json_data['geometry']['coll_pgons'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.PGONS + (num_ents.get(ENT_TYPE.PGONS) + pgon_i));
+            sim_model.addCollEnt(coll, ENT_TYPE.PGON + (num_ents.get(ENT_TYPE.PGON) + pgon_i));
         }
         for (const child_coll_i of json_data['geometry']['coll_colls'][i]) {
-            sim_model.addCollEnt(coll, ENT_TYPE.COLLS + (num_ents.get(ENT_TYPE.COLLS) + child_coll_i));
+            sim_model.addCollEnt(coll, ENT_TYPE.COLL + (num_ents.get(ENT_TYPE.COLL) + child_coll_i));
         }
         if (imp_coll !== null) { sim_model.addCollEnt(imp_coll, coll); }
     }
