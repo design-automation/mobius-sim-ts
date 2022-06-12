@@ -31,7 +31,8 @@ export function exportSimData(sim_model: Sim, ents: string|string[] = null): obj
         const ent_sets: TEntSets = sim_model.getSubEnts(ents);
         for (const [ent_type, _] of ent_types) {
             // create maps for entity name -> entity index
-            ents_i_map.set(ent_type, new Map(ent_sets.get(ent_type).map((ent, i) => [ent, i])));
+            ents_i_map.set(ent_type, new Map(
+                Array.from(ent_sets.get(ent_type)).map((ent, i) => [ent, i])));
         }
     }
     // create the geometry data

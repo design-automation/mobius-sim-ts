@@ -26,7 +26,7 @@ test('Basic entity creation.', () => {
     expect(sim.getEnts(ENT_TYPE.PLINE, coll)).toEqual(['pl0']);
     expect(sim.getEnts(ENT_TYPE.PGON, coll)).toEqual(['pg0']);
     expect(sim.getEnts(ENT_TYPE.VERT, p0)).toEqual(['_v0', '_v2']);
-    expect(sim.getEnts(ENT_TYPE.EDGE, p0)).toEqual(['_e0', '_e1', '_e3']);
+    expect(sim.getEnts(ENT_TYPE.EDGE, p0)).toEqual(['_e0','_e3','_e1']);
     expect(sim.getEnts(ENT_TYPE.WIRE, p0)).toEqual(['_w0']);
     expect(sim.getEnts(ENT_TYPE.POINT, p0)).toEqual([]);
     expect(sim.getEnts(ENT_TYPE.PLINE, p0)).toEqual(['pl0']);
@@ -191,4 +191,16 @@ test('Pgon with hole posis', () => {
     const posis = sim.getEntPosis(pgon);
     expect(posis).toEqual([['ps0', 'ps1', 'ps2', 'ps3'],['ps4', 'ps5', 'ps6']]);
     // expect(sim.toString()).toEqual(['dummy']);
+});
+
+test('Copy some objects', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([1,2,3]);
+    const p1 = sim.addPosi([9,8,7]);
+    const p2 = sim.addPosi([0,0,0]);
+    const point = sim.addPoint(p2);
+    const pline = sim.addPline([p0, p1]);
+    const pgon = sim.addPgon([p0, p1, p2]);
+    const result = sim.copyEnts([point, pline, pgon]);
+    expect(result).toEqual(['pt1', 'pl1', 'pg1']);
 });

@@ -1,5 +1,7 @@
 import { Delete } from './sim_delete';
 import { Graph, X2X } from './graph';
+import { Edit } from './sim_edit';
+import { Triangulate } from './sim_tri';
 // =================================================================================================
 // ENUMS
 // =================================================================================================
@@ -19,8 +21,7 @@ export enum ENT_TYPE {
     MODEL = 'mo'
 }
 // -------------------------------------------------------------------------------------------------
-export enum OBJ_TYPE {
-    POINT,
+export enum VERT_TYPE {
     PLINE,
     PGON,
     PGON_HOLE
@@ -83,6 +84,10 @@ export const _GR_ATTRIB_NODE: Map<ENT_TYPE, string> = new Map([
     [ENT_TYPE.PGON, '_atts_pgons'],
     [ENT_TYPE.COLL, '_atts_colls']
 ]);
+// -------------------------------------------------------------------------------------------------
+// node names for attributes
+// must macth _graphAttribNodeName()
+export const _GR_XYZ_NODE: string = '_att_psxyz';
 // -------------------------------------------------------------------------------------------------
 // ENT SEQUENCES FOR QUERES
 const _ENT_SEQ: Map<ENT_TYPE, number> = new Map([
@@ -155,10 +160,69 @@ export const _ALL_ENT_TYPES: Set<ENT_TYPE> = new Set([
 // =================================================================================================
 // CLASS
 // =================================================================================================
+// 
+// The nodes for entities are:
+//
+// - ent nodes
+//   - e.g. '_p1', '_v123'
+//
+// - ent_type nodes 
+//   - e.g. '_ents_posis', '_ents_verts'
+//
+// The nodes for attribs are:
+//
+// - _atts_ent_type nodes 
+//   - e.g.'_atts_pgons'
+//
+// - _att_ent_type_name nodes 
+//   - e.g. '_att_pgarea'
+//
+// - _att_val nodes 
+//   - e.g. '[1,2,3]'
+//
+// The forward edges are as follows:
+//
+// Edges of type 'entity':
+//
+// - ent -> sub_ents 
+//   - e.g. _pg0 -> [_w0, _w1]
+//   - edge_type = 'entity'
+//   - many to many
+//
+// Edges of type 'meta':
+//
+// - ent_type -> ents
+//   - e.g. '_ents_pgons' -> '_pg0'
+//   - edge_type = 'meta'
+//   - one to many, no reverse edges
+//
+// - ent_type_attribs -> _att_ent_type_name 
+//   - e.g. '_atts_pgons' -> '_att_pgarea'
+//   - edge_type = 'meta'
+//   - one to many, no reverse edges
+//
+// Edges of type 'att':
+//
+// - attrib_val -> att_ent_type_name 
+//   - e.g. '123' -> '_att_pgarea'
+//   - edge_type = 'attrib' 
+//   - many to one
+//
+// Edges of with a type specific to the attribute:
+//
+// - ent -> attrib_val 
+//   - '_pg0' -> '123'
+//   - edge_type = att_ent_type_name e.g. '_att_pgarea'
+//   - many to one
+//
+// For each forward edge, there is an equivalent reverse edge, except for META edges.
+//
 export class Sim {
     private graph: Graph;
     private model_attribs: Map<string, any>;
     private del: Delete;
+    private edit: Edit;
+    private tri: Triangulate;
     // ---------------------------------------------------------------------------------------------
     /**
      * CONSTRUCTOR
@@ -166,6 +230,9 @@ export class Sim {
     constructor() {
         this.graph = new Graph();
         this.del = new Delete(this.graph, this);
+        this.edit = new Edit(this.graph, this);
+        this.tri = new Triangulate(this.graph, this);
+
         // graph
         this.graph.addEdgeType(_GR_EDGE_TYPE.ENTITY); // many to many
         this.graph.addEdgeType(_GR_EDGE_TYPE.ATTRIB); // many to one
@@ -183,148 +250,16 @@ export class Sim {
         this.model_attribs = new Map();
     }
     // =============================================================================================
-    // PRIVATE GRAPH METHODS
-    // =============================================================================================
-    // 
-    // The nodes for entities are:
-    
-    // - ent nodes
-    //   - e.g. 'ps01', '_v123'
-
-    // - ent_type nodes 
-    //   - e.g. 'posis', 'verts'
-
-    // The nodes for attribs are:
-
-    // - _atts_ent_type nodes 
-    //   - e.g.'_atts_pgons'
-
-    // - _att_ent_type_name nodes 
-    //   - e.g. '_att_pgons_area'
-
-    // - _att_val nodes 
-    //   - e.g. '[1,2,3]'
-
-    // The forward edges are as follows:
-    
-    // Edges of type 'entity':
-
-    // - ent -> sub_ents 
-    //   - e.g. pg0 -> [w0, w1]
-    //   - edge_type = 'entity'
-    //   - many to many
-
-    // Edges of type 'meta':
-
-    // - ent_type -> ents
-    //   - e.g. pgons -> pg0
-    //   - edge_type = 'meta'
-    //   - one to many
-
-    // - ent_type_attribs -> att_ent_type_name 
-    //   - e.g. pgons_attribs -> att_pgons_area) 
-    //   - edge_type = 'meta'
-    //   - one to many
-
-    // Edges of type 'att':
-
-    // - attrib_val -> att_ent_type_name 
-    //   - e.g. val_123 -> att_pgons_area
-    //   - edge_type = 'attrib' 
-    //   - many to one
-
-    // Edges of with a type specific to the attribute:
-
-    // - ent -> attrib_val 
-    //   - pg0 -> val_123
-    //   - edge_type = att_ent_type_name e.g. '_att_pgons_area'
-    //   - many to one
-
-    // For each forward edge, there is an equivalent reverse edge.
-
-    // 
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Create the name for an attrib node.
-     * It will be something like this: '_att_pgons_area'.
-     * @param ent_type 
-     * @param att_name 
-     * @returns 
-     */
-     private _graphAttribNodeName(ent_type: ENT_TYPE, att_name: string): string {
-        return '_att_' + ent_type + '_' + att_name;
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Create the name for an attrib value node.
-     * For example [1,2,3] will become  '1,2,3'.
-     * @param att_val 
-     * @returns 
-     */
-     private _graphAttribValNodeName(att_val: TAttribDataTypes): string {
-        return typeof(att_val) === 'object' ? JSON.stringify(att_val) : att_val.toString();
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Add an entity node to the graph. 
-     * The entity can be a posi, vert, edge, wire, point, pline, pgon, coll.
-     * The entity node will have a name.
-     * The entity_type node wil be connected to the entity node.
-     * @param ent_type 
-     * @returns 
-     */
-     private _graphAddEnt(ent_type: ENT_TYPE, obj_type: OBJ_TYPE = null): string {
-        const ent_type_node: string = _GR_ENT_NODE.get(ent_type);
-        // create the node name, from prefix and then next count number
-        const ent_i: number = this.graph.degreeOut(ent_type_node, _GR_EDGE_TYPE.META);
-        const ent: string = ent_type + ent_i;
-        // add a node with name `ent`
-        this.graph.addNode(ent);
-        this.graph.setNodeProp(ent, 'ent_type', ent_type); 
-        if (obj_type !== null) {
-            this.graph.setNodeProp(ent, 'obj_type', obj_type); 
-        }
-        // create an edge from the `ent_type` to the new ent
-        this.graph.addEdge(ent_type_node, ent, _GR_EDGE_TYPE.META);
-        // return the name of the new entity node
-        return ent;
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Add an attribute node to the graph.
-     * Create the node name, from the entity type and attribute name.
-     * @param ent_type 
-     * @param att_name 
-     * @param data_type 
-     * @returns 
-     */
-     private _graphAddAttrib(ent_type: ENT_TYPE, att_name: string, data_type: DATA_TYPE): string {
-        const att: string = this._graphAttribNodeName(ent_type, att_name);
-        // add the node to the graph
-        // the new node has 4 properties
-        this.graph.addNode(att);
-        this.graph.setNodeProp(att, 'ent_type', ent_type); // the `entity_type` for this attribute, `posi`, `vert`, etc
-        this.graph.setNodeProp(att, 'name', att_name); // the name of the attribute
-        this.graph.setNodeProp(att, 'data_type', data_type); // the data type of this attribute
-        // create an edge from the node `ent_type_attribs` (e.g. posis_attribs) to the new attrib node
-        // the edge type is `meta`
-        this.graph.addEdge(_GR_ATTRIB_NODE.get(ent_type), att, _GR_EDGE_TYPE.META);
-        // create a new edge type for this attrib
-        this.graph.addEdgeType(att); // many to one
-        // return the name of the new attrib node
-        return att;
-    }
-    // =============================================================================================
-    // ADD METHODS FOR ENTITIES
+    // CREATE NEW ENTITIES
     // =============================================================================================
     /**
      * Add a position to the model, specifying the XYZ coordinates.
      * @param xyz The XYZ coordinates, a list of three numbers.
      * @returns The ID of the new position.
      */
-    public addPosi(xyz: Txyz): string {
+    public addPosi(xyz: Txyz = null): string {
         const posi: string = this._graphAddEnt(ENT_TYPE.POSI);
-        this.setAttribVal(posi, "xyz", xyz);
+        if (xyz !== null) { this.setPosiCoords(posi, xyz); }
         return posi;
     }
     // ---------------------------------------------------------------------------------------------
@@ -351,36 +286,9 @@ export class Sim {
         // pline
         const pline = this._graphAddEnt(ENT_TYPE.PLINE);
         const closed: boolean = posis[0] === posis[posis.length - 1];
-        this._addEdgeSeq(posis, posis.length - 1, closed, OBJ_TYPE.PLINE, pline);
+        this._addEdgeSeq(posis, posis.length - 1, closed, VERT_TYPE.PLINE, pline);
         //  return
         return pline;
-    }
-    private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, 
-            obj_type: OBJ_TYPE, parent: string) {
-        const num_verts: number = closed ? num_edges : num_edges + 1;
-        let v0: string, v1: string, edge: string;
-        // v0
-        const v_start: string = this._graphAddEnt(ENT_TYPE.VERT, obj_type);
-        this.graph.addEdge(v_start, posis[0], _GR_EDGE_TYPE.ENTITY);
-        v0 = v_start;
-        for (let i = 1; i < num_verts; i++) {
-            // v1
-            v1 = this._graphAddEnt(ENT_TYPE.VERT, obj_type);
-            this.graph.addEdge(v1, posis[i], _GR_EDGE_TYPE.ENTITY);
-            // edge
-            edge = this._graphAddEnt(ENT_TYPE.EDGE, obj_type);
-            this.graph.addEdge(parent, edge, _GR_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v0, _GR_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v1, _GR_EDGE_TYPE.ENTITY);
-            v0 = v1;
-        }
-        // last edge
-        if (closed) {
-            edge = this._graphAddEnt(ENT_TYPE.EDGE, obj_type);
-            this.graph.addEdge(parent, edge, _GR_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v1, _GR_EDGE_TYPE.ENTITY);
-            this.graph.addEdge(edge, v_start, _GR_EDGE_TYPE.ENTITY);
-        }
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -388,8 +296,9 @@ export class Sim {
      * @param posis A list of position IDs.
      * @returns The ID of the new polygon.
      */
-    public addPgon(posis: string[]): string {
-        if (posis.length < 3) {
+    public addPgon(posis: string[]|string[][]): string {
+        posis = Array.isArray(posis[0]) ? posis : [posis] as string[][];
+        if (posis[0].length < 3) {
             throw new Error('Too few positions for polygon.');
         }
         // pgon and wire
@@ -397,8 +306,13 @@ export class Sim {
         const wire = this._graphAddEnt(ENT_TYPE.WIRE);
         this.graph.addEdge(pgon, wire, _GR_EDGE_TYPE.ENTITY);
         // verts and edges
-        this._addEdgeSeq(posis, posis.length, true, OBJ_TYPE.PGON, wire);
-        //  return
+        this._addEdgeSeq(posis[0] as string[], posis[0].length, true, VERT_TYPE.PGON, wire);
+        // make holes
+        for (let i = 1; i < posis.length; i++) {
+            this.addPgonHole(pgon, posis[i] as string[]);
+        }
+        // TODO triangulate
+        // return
         return pgon;
     }
     // ---------------------------------------------------------------------------------------------
@@ -416,12 +330,175 @@ export class Sim {
         const wire = this._graphAddEnt(ENT_TYPE.WIRE);
         this.graph.addEdge(pgon, wire, _GR_EDGE_TYPE.ENTITY);
         // verts and edges
-        this._addEdgeSeq(posis, posis.length, true, OBJ_TYPE.PGON_HOLE, wire);
+        this._addEdgeSeq(posis, posis.length, true, VERT_TYPE.PGON_HOLE, wire);
+        // TODO triangulate
         //  return
         return wire;
     }
     // ---------------------------------------------------------------------------------------------
+    private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, 
+            vert_type: VERT_TYPE, parent: string): void {
+        const num_verts: number = closed ? num_edges : num_edges + 1;
+        const edges: string[] = [];
+        let v0: string, v1: string;
+        // v0
+        const v_start: string = this._graphAddEnt(ENT_TYPE.VERT);
+        this.graph.setNodeProp(v_start, 'vert_type', vert_type);
+        this.graph.addEdge(v_start, posis[0], _GR_EDGE_TYPE.ENTITY);
+        v0 = v_start;
+        for (let i = 1; i < num_verts; i++) {
+            // v1
+            v1 = this._graphAddEnt(ENT_TYPE.VERT);
+            this.graph.setNodeProp(v1, 'vert_type', vert_type);
+            this.graph.addEdge(v1, posis[i], _GR_EDGE_TYPE.ENTITY);
+            // edge
+            const edge: string = this._graphAddEnt(ENT_TYPE.EDGE);
+            this.graph.addEdge(parent, edge, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v0, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(edge, v1, _GR_EDGE_TYPE.ENTITY);
+            v0 = v1;
+            edges.push(edge);
+        }
+        // last edge
+        if (closed) {
+            const last_edge: string = this._graphAddEnt(ENT_TYPE.EDGE);
+            this.graph.addEdge(parent, last_edge, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(last_edge, v1, _GR_EDGE_TYPE.ENTITY);
+            this.graph.addEdge(last_edge, v_start, _GR_EDGE_TYPE.ENTITY);
+            // re-order the predecessors of the start vertex
+            // the order should be [last_edge, first_edge]
+            this.graph.setPredessors(v_start, [last_edge, edges[0]], _GR_EDGE_TYPE.ENTITY);
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
     /**
+     * Make a copy of an list of entities. For objects, the object positions are also copied. For 
+     * collections, the contents of the collection is also copied. 
+     * TODO Raise error for deleted ents ???
+     * @param ents A list of IDs of entitities to be copied.
+     * @returns A list of IDs of the copied entities.
+     */
+    public copyEnts(ents: string[]): string[] {
+        const ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> = new Map([
+            [ENT_TYPE.POSI, {old: [], new: []}],
+            [ENT_TYPE.VERT, {old: [], new: []}],
+            [ENT_TYPE.EDGE, {old: [], new: []}],
+            [ENT_TYPE.WIRE, {old: [], new: []}],
+            [ENT_TYPE.POINT, {old: [], new: []}],
+            [ENT_TYPE.PLINE, {old: [], new: []}],
+            [ENT_TYPE.PGON, {old: [], new: []}],
+            [ENT_TYPE.COLL, {old: [], new: []}],
+        ]);
+        const copies: string[] = [];
+        for (const old_ent of ents) {
+            const ent_type: ENT_TYPE = this.graph.getNodeProp(old_ent, 'ent_type');
+            if (ent_type === ENT_TYPE.POSI) {
+                const new_posi: string = this.addPosi();
+                this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), [old_ent], [new_posi]);
+                copies.push(new_posi);
+            } else if (ent_type === ENT_TYPE.POINT) {
+                copies.push(this._copyPoint(ents_map, old_ent));
+            } else if (ent_type === ENT_TYPE.PLINE) {
+                copies.push(this._copyPline(ents_map, old_ent));
+            } else if (ent_type === ENT_TYPE.PGON) {
+                copies.push(this._copyPgon(ents_map, old_ent));
+            } else if (ent_type === ENT_TYPE.COLL) {
+                copies.push(this._copyColl(ents_map, old_ent));
+            }
+        }
+        // copy the attributes
+        this._copyTransferAttribs(ents_map);
+        return copies;
+    }
+    private _copyPoint(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_point: string): string {
+        const old_posi: string = this.getEntPosis(old_point) as string;
+        const new_posi: string = this.addPosi();
+        const new_point: string = this.addPoint(old_posi);
+        this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), [old_posi], [new_posi]);
+        this._copyAddEnts(ents_map.get(ENT_TYPE.POINT), [old_point], [new_point]);
+        return new_point;
+    }
+    private _copyPline(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_pline: string): string {
+        const old_posis: string[] = this.getEntPosis(old_pline) as string[];
+        const new_posis: string[] = old_posis.map(_ => this.addPosi());
+        this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), old_posis, new_posis);
+        const new_pline: string = this.addPline(new_posis);
+        for (const sub_ent_type of [ENT_TYPE.PLINE,ENT_TYPE.EDGE,ENT_TYPE.VERT]) {
+            const old_ents: string[] = this.getEnts(sub_ent_type, old_pline);
+            const new_ents: string[] = this.getEnts(sub_ent_type, new_pline);
+            this._copyAddEnts(ents_map.get(sub_ent_type), old_ents, new_ents);
+        }
+        return new_pline;
+    }
+    private _copyPgon(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_pgon: string): string {
+        const old_posis: string[][] = this.getEntPosis(old_pgon) as string[][];
+        const new_posis: string[][] = old_posis.map(posis => posis.map(_ => this.addPosi()));
+        for (let i = 0; i < old_posis.length; i++) {
+            this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), old_posis[i], new_posis[i]);
+        }
+        const new_pgon: string = this.addPgon(new_posis);
+        for (const sub_ent_type of [ENT_TYPE.PGON,ENT_TYPE.WIRE,ENT_TYPE.EDGE,ENT_TYPE.VERT]) {
+            const old_ents: string[] = this.getEnts(sub_ent_type, old_pgon);
+            const new_ents: string[] = this.getEnts(sub_ent_type, new_pgon);
+            this._copyAddEnts(ents_map.get(sub_ent_type), old_ents, new_ents);
+        }
+        return new_pgon;
+    }
+    private _copyColl(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_coll: string): string {
+        const new_coll: string = this.addColl();
+        this._copyAddEnts(ents_map.get(ENT_TYPE.COLL), [old_coll], [new_coll]);
+        const coll_ents: string[] = [];
+        for (const old_point of this.getEnts(ENT_TYPE.POINT, old_coll)) {
+            coll_ents.push( this._copyPoint(ents_map, old_point) );
+        }
+        for (const old_pline of this.getEnts(ENT_TYPE.PLINE, old_coll)) {
+            coll_ents.push( this._copyPline(ents_map, old_pline) );
+        }
+        for (const old_pgon of this.getEnts(ENT_TYPE.PGON, old_coll)) {
+            coll_ents.push( this._copyPgon(ents_map, old_pgon) );
+        }
+        for (const old_coll_succ of this.getEnts(ENT_TYPE.COLL_SUCC, old_coll)) {
+            coll_ents.push( this._copyColl(ents_map, old_coll_succ) ); // recursive
+        }
+        coll_ents.forEach( ent => this.addCollEnt(new_coll, ent) );
+        return new_coll;
+    }
+    private _copyAddEnts(ents: {old: string[], new: string[]}, old_ents: string[], new_ents: string[]): void {
+        if (old_ents.length  !== new_ents.length) {
+            throw new Error('Error copying ents: nunmber of sub-ents do not match');
+        }
+        old_ents.forEach( ent => ents.old.push(ent) );
+        new_ents.forEach( ent => ents.new.push(ent) );
+    }
+    private _copyTransferAttribs(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>) {
+        for (const [ent_type, ents] of ents_map.entries()) {
+            for (const att_name of this.getAttribs(ent_type)) {
+                const att: string = this._graphAttribNodeName(ent_type, att_name);
+                for (let i = 0; i < ents.old.length; i++) {
+                    const att_val_node: string = this.graph.successors(ents.old[i], att)[0];
+                    if (att_val_node !== undefined) {
+                        this.graph.addEdge(ents.new[i], att_val_node, att);
+                    }
+                }
+            }
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Make a clone of an list of entities and delete the originals. For objects, the positions are
+     * also cloned. 
+     * @param ents A list of IDs of entitities to be cloned.
+     * @returns A list of IDs of the cloned entities.
+     */
+     public cloneEnts(ents: string[]): string[] {
+        const clones: string[] = this.copyEnts(ents);
+        this.delEnts(ents);
+        return clones;
+    }
+    // =============================================================================================
+    // COLLECTIONS 
+    // =============================================================================================
+     /**
      * Add a new empty collection to the model.
      * @returns The ID of the collection.
      */
@@ -433,6 +510,7 @@ export class Sim {
      * Add an entity to an existing collection in the model.
      * Collections can contain points, polylines, polygons, and other collections.
      * Collections cannot contain positions, vertices, edges or wires.
+     * TODO Raise error for deleted ents ???
      * @param coll The ID of the collection to which the entity will be added.
      * @param ent The ID of the entity to be added to the collection.
      */
@@ -445,26 +523,18 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Make a copy of an entity
-     * @param ent The ID of the entity to copy.
-     * @returns The ID of the copied entity.
+     * Remove an entity from an existing collection in the model.
+     * Collections can contain points, polylines, polygons, and other collections.
+     * If the entity is not in the collection, no error is thrown.
+     * TODO Test
+     * @param coll The ID of the collection from which the entity will be removed.
+     * @param ent The ID of the entity to be added to the collection.
      */
-    public copyEnt(ent: string): string {
-        // TODO
-        throw new Error('Not implemented.');
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Make a clone of an entity, and delete the original.
-     * @param ent The ID of the entity to clone.
-     * @returns The ID of the cloned entity.
-     */
-     public cloneEnt(ent: string): string {
-        // TODO
-        throw new Error('Not implemented.');
+    public remCollEnt(coll: string, ent: string): void {
+        this.graph.delEdge(coll, ent, _GR_EDGE_TYPE.ENTITY);
     }
     // =============================================================================================
-    // ATTRIBUTE METHODS
+    // ENTITY ATTRIBUTES
     // =============================================================================================
     /**
      * Create a new attribute in the model, specifying the entity type, the attribute name, and
@@ -508,25 +578,25 @@ export class Sim {
      * attribute value. Note that an attribute with the specified name must already exist in the
      * model. If the attribute does not exist, an exception will be thrown. In addition, the
      * attribute value and the data type for the attribute must match.
+     * TODO Raise error for deleted ents ???
      * @param ent The ID of the entity.
      * @param att_name The name of the attribute.
      * @param att_value The attribute value to set.
      */
     public setAttribVal(ent: string, att_name: string, att_value: TAttribDataTypes): void {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
-        // e.g. 123 is assied to both a posi and a pgon
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         if (ent_type !== this.graph.getNodeProp(att, 'ent_type')) {
             throw new Error('Entity and attribute have different types.');
         }
         const data_type: DATA_TYPE = this._check_type(att_value);
-        if (this.graph.getNodeProp(att, 'data_type') !== data_type) {
+        if (data_type !== this.graph.getNodeProp(att, 'data_type')) {
             throw new Error('Attribute value "' + att_value + '" has the wrong data type. ' + 
             'The data type is a "' + data_type + '". ' + 
             'The data type should be a "' + this.graph.getNodeProp(att, 'data_type') + '".' );
         }
         // get the name of the attribute value node
-        const att_val_node: string|number = this._graphAttribValNodeName(att_value);
+        const att_val_node: string = this._graphAttribValNodeName(att_value);
         // make sure that no node with the name already exists
         if (!this.graph.hasNode(att_val_node)) {
             // add the attrib value node
@@ -542,6 +612,7 @@ export class Sim {
     // ---------------------------------------------------------------------------------------------
     /**
      * Get an attribute value from an entity in the model, specifying the attribute name.
+     * TODO Raise error for deleted ents ???
      * @param ent  The ID of the entity for which to get the attribute value.
      * @param att_name  The name of the attribute.
      * @returns The attribute value or null if no value.
@@ -558,6 +629,7 @@ export class Sim {
     // ---------------------------------------------------------------------------------------------
     /**
      * Delete an attribute value from an entity in the model, specifying the attribute name.
+     * TODO Raise error for deleted ents ???
      * @param ent  The ID of the entity for which to get the attribute value.
      * @param att_name The name of the attribute to delete.
      */
@@ -599,6 +671,25 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
+     * Get an attribute datatype, specifying the attribute entity type and attribute name.
+     * TODO test
+     * @param ent_type The entity type for getting attributes. (See ENT_TYPE)
+     * @param att_name The existing name of the attribute.
+     * @param new_name The new name of the attribute.
+     */
+     public renameAttrib(ent_type: ENT_TYPE, att_name: string, new_name: string): void {
+        const old_att: string = this._graphAttribNodeName(ent_type, att_name);
+        const att_data_type: DATA_TYPE = this.graph.getNodeProp(old_att, 'data_type');
+        const new_att: string = this._graphAddAttrib(ent_type, new_name, att_data_type);
+        for (const pred of this.graph.predecessors(old_att, _GR_EDGE_TYPE.ATTRIB)) {
+            this.graph.delEdge(pred, old_att, _GR_EDGE_TYPE.ATTRIB);
+            this.graph.addEdge(pred, new_att, _GR_EDGE_TYPE.ATTRIB);
+        }
+    }
+    // =============================================================================================
+    // MODEL ATTRIBUTES
+    // =============================================================================================
+    /**
      * Returns true if a model attribute exists with the specified name.
      * @param att_name  The name of the attribute. 
      * @returns True is the attribute exists, false otherwise.
@@ -630,6 +721,15 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
+     * Delete an attribute value from the model.
+     * TODO test
+     * @param att_name The name of the attribute.
+     */
+     public delModelAttribVal(att_name: string): void {
+        this.model_attribs.delete(att_name);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
      * Get a list of attribute names from the model. Model attributes are top level attributes that
      * apply to the whole model. As such, they are not attached to any specific entities.
      * @returns 
@@ -638,7 +738,7 @@ export class Sim {
         return Array.from(this.model_attribs.keys());
     }
     // =============================================================================================
-    // METHODS FOR ENTITIES
+    // ENTITIES
     // =============================================================================================
     /**
      * Get the number of entities of the specified entity type.  
@@ -661,6 +761,7 @@ export class Sim {
      * used in the polyline and polygon are returned. Similarly, if ent_type is 'pgons' and
      * 'source_ents' is a list of positions, then a list of polygons is returned, of polygons that
      * make use of the specified positions.
+     * TODO Raise error for deleted ents ???
      * @param target_ent_type The type of entity to get from the model.
      * @param source_ents null, or a single entity ID or a list of entity IDs from which to get the
      * target entities.
@@ -790,13 +891,78 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
+     * 
+     * @param ents 
+     * @returns 
+     */
+    public getEntSets(ents: string|string[]): TEntSets {
+        const ent_sets: Map<ENT_TYPE, Set<string>> = new Map([
+            [ENT_TYPE.POSI, new Set()],
+            [ENT_TYPE.POINT, new Set()],
+            [ENT_TYPE.PLINE, new Set()],
+            [ENT_TYPE.PGON, new Set()],
+            [ENT_TYPE.COLL, new Set()]
+        ]);
+        if (!Array.isArray(ents)) { ents = [ents]; }
+        for (const ent of ents) {
+            const ent_type = this.graph.getNodeProp(ent, 'ent_type');
+            if (ent_type === ENT_TYPE.POSI) {
+                ent_sets.get(ENT_TYPE.POSI).add(ent);
+            } else if (ent_type === ENT_TYPE.POINT) {
+                ent_sets.get(ENT_TYPE.POINT).add(ent);
+            } else if (ent_type === ENT_TYPE.PLINE) {
+                ent_sets.get(ENT_TYPE.PLINE).add(ent);
+            } else if (ent_type === ENT_TYPE.PGON) {
+                ent_sets.get(ENT_TYPE.PGON).add(ent);
+            } else if (ent_type === ENT_TYPE.COLL) {
+                ent_sets.get(ENT_TYPE.COLL).add(ent);
+                for (const obj_type of _OBJ_ENT_TYPES) {
+                    for (const obj of this.getEnts(obj_type, ent)) {
+                        ent_sets.get(obj_type).add(obj);
+                    }
+                }
+            } else {
+                throw new Error('Entity type not supported: ' + ent_type);
+            }
+        }
+        return ent_sets;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Invert ent sets
+     * @param ent_sets
+     */
+    public invertEntSets(ent_sets: TEntSets): void {
+        // object posis
+        for (const obj_type of _OBJ_ENT_TYPES) {
+            for (const obj of ent_sets.get(obj_type)) {
+                for (const posi of this.getEnts(ENT_TYPE.POSI, obj)) {
+                    ent_sets.get(ENT_TYPE.POSI).add(posi);
+                }
+            }
+        }
+        // invert
+        for (const ent_type of ent_sets.keys()) {
+            const ents: string[] = this.getEnts(ent_type);
+            const inverted: Set<string> = new Set();
+            const keep_set: Set<string> = ent_sets.get(ent_type);
+            for (const ent of ents) {
+                if (!keep_set.has(ent)) {
+                    inverted.add(ent);
+                }
+            }
+            ent_sets.set(ent_type, inverted);
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
      * Get sub ents of os a set of entites. The sub ents will include all the ents that are under
      * the input ents, in the entity hierarchy. For example, if a polygon is passed in, then the
      * sub ents will include the positions, vertices, edges, wires of that polygon. If a collection 
      * if passed in, then the sub ents will inlude any points, polylines, polygons, and child 
      * collections, as well as all thier respective sub entities. The lists of entities that are 
      * returned will not have any duplicates. (They are sets.)
-     * 
+     * TODO Raise error for deleted ents ???
      * @param ents A list of entity IDs from which to get sub-entities.
      * @returns Entity sets.
      */
@@ -868,15 +1034,52 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
+     * Delete a set of entities. Unused posis will also be deleted.
+     * For positions, the connected entities will be deleted.
+     * For collections, the contents of the collection will not be deleted.
+     * @param ents A list of entity IDs.
+     * @param invert If true, then the list of entities wil be inverted.
+     * @returns The ID of the new entity.
+     */
+    public delEnts(ents: string[] = null, invert: boolean = false): void {
+        if (ents === null) {
+            // Delete all entities.
+            this.graph.clearSnapshot();
+        }
+        const ent_sets: TEntSets = this.getEntSets(ents);
+        console.log(">>>>>1>", JSON.stringify(Array.from(ent_sets).map( v => [v[0], Array.from(v[1])])));
+        if (invert) { this.invertEntSets(ent_sets); }
+        console.log(">>>>>2>", JSON.stringify(Array.from(ent_sets).map( v => [v[0], Array.from(v[1])])));
+        // delete collctions and objects
+        for (const coll of ent_sets.get(ENT_TYPE.COLL)) {
+            this.del.delColl(coll);
+        }
+        for (const pgon of ent_sets.get(ENT_TYPE.PGON)) {
+            this.del.delPgon(pgon);
+        }
+        for (const pline of ent_sets.get(ENT_TYPE.PLINE)) {
+            this.del.delPline(pline);
+        }
+        for (const point of ent_sets.get(ENT_TYPE.POINT)) {
+            this.del.delPoint(point);
+        }
+        // delete positions
+        this.del.delPosis(Array.from(ent_sets.get(ENT_TYPE.POSI)));
+    }
+    // =============================================================================================
+    // POSITIONS
+    // =============================================================================================
+    /**
      * Get a position ID or list the position IDs for an entity. If the entity is a point, vertex,
      * or position, then a single position is returned. If the entity is a polyline, a list of
      * positions will be returned. For a closed polyline, the first and last positions will be the
      * same. If the entity is a polygon, a nested list of positions is returned. If the entity is a
      * collection, ... not mplemented
+     * TODO Raise error for deleted ents ???
      * @param ent An entity ID from which to get the position.
      * @returns A list of position IDs. 
      */
-    public getEntPosis(ent: string): string|string[]|string[][] {
+     public getEntPosis(ent: string): string|string[]|string[][] {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
         if ( ent_type === ENT_TYPE.POSI ) {
             return ent;
@@ -918,52 +1121,40 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Get the XYZ coordinates of an entity. If the entity is a point, vertex, or position, then a
-     * single coord is returned. If the entity is a polyline, a list of coords will be returned.
-     * For a closed polyline, the first and last coords will be the same. If the entity is a
-     * polygon, a nested list of coords is returned. If the entity is a collection, ... not
-     * mplemented.
+     * Get the XYZ coordinates of a position.
+     * TODO Raise error for deleted ents ???
+     * TODO is this method really needed?
      * @param ent A position ID.
      * @returns The XYZ coordinates.
      */
-    public getEntCoords(ent: string): Txyz|Txyz[]|Txyz[][] { 
-        const xyz_att: string = this._graphAttribNodeName(ENT_TYPE.POSI, 'xyz');
-        const posis: string|string[]|string[][] = this.getEntPosis(ent);
-        if (!Array.isArray(posis)) {
-            const att_val: string = this.graph.successors(posis, xyz_att)[0];
-            return this.graph.getNodeProp(att_val, 'value');
-        }
-        if (posis.length === 0) { return []; }
-        if (!Array.isArray(posis[0])) {
-            const coords: Txyz[] = [];
-            for (const posi of posis as string[]) {
-                const att_vals = this.graph.successors(posi, xyz_att)[0];
-                coords.push( this.graph.getNodeProp(att_vals, 'value') );
-            }
-            return coords;
-        }
-        const coords_arr: Txyz[][] = [];
-        for (const wire_posis of posis as string[][]) {
-            const coords: Txyz[] = [];
-            for (const posi of wire_posis) {
-                const att_vals = this.graph.successors(posi, xyz_att)[0];
-                coords.push(this.graph.getNodeProp(att_vals, 'value'));
-            }
-            coords_arr.push(coords);
-        }
-        return coords_arr;
+    public getPosiCoords(ent: string): Txyz { 
+        const att_val: string = this.graph.successors(ent, _GR_XYZ_NODE)[0];
+        return this.graph.getNodeProp(att_val, 'value');
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Delete a set of entities. Unused posis will also be deleted.
+     * Set the XYZ coordinates of a position.
      * For positions, the connected entities will be deleted.
      * For collections, the contents of the collection will not be deleted.
-     * @param ents A list of entity IDs.
-     * @param invert If true, then the list of entities wil be inverted.
-     * @returns The ID of the new entity.
+     * TODO test
+     * TODO Raise error for deleted ents ???
+     * @param ent The ID of the position.
+     * @param xyz A list of three numbers, the XYZ coordinates.
      */
-    public delEnts(ents: string[] = null, invert: boolean = false): void {
-        this.del.delEnts(ents, invert);
+    public setPosiCoords(ent: string, xyz: Txyz): void {
+        // get the name of the attribute value node
+        const att_val_node: string = this._graphAttribValNodeName(xyz);
+        // make sure that no node with the name already exists
+        if (!this.graph.hasNode(att_val_node)) {
+            // add the attrib value node
+            this.graph.addNode(att_val_node);
+            this.graph.setNodeProp(att_val_node, 'value', xyz);
+        }
+        // add an edge from the att_val_node to the attrib
+        this.graph.addEdge(att_val_node, _GR_XYZ_NODE, _GR_EDGE_TYPE.ATTRIB); // att_val -> att
+        // add and edge from the ent to the att_val_node
+        this.graph.delEdge(ent, null, _GR_XYZ_NODE);
+        this.graph.addEdge(ent, att_val_node, _GR_XYZ_NODE); // ent -> att_val; ent <- att_val;
     }
     // =============================================================================================
     // QUERY
@@ -980,11 +1171,23 @@ export class Sim {
     // ---------------------------------------------------------------------------------------------
     /**
      * Return the entity type of an entity in the model
+     * TODO Raise error for deleted ents ???
      * @param ent An entity ID.
      * @returns The entity type (see ENT_TYPE).
      */
     public entType(ent: string): ENT_TYPE { 
         return this.graph.getNodeProp(ent, 'ent_type');
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Return the object entity type of a vertex in the model. 
+     * Object types can be for a polyline, a polygn border, or a polygon hole.
+     * TODO Raise error for deleted ents ???
+     * @param ent An vertex ID.
+     * @returns The object entity type of the vertex (see OBJ_TYPE).
+     */
+    public vertObjType(ent: string): VERT_TYPE { 
+        return this.graph.getNodeProp(ent, 'vert_type');
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -1090,6 +1293,7 @@ export class Sim {
     // ---------------------------------------------------------------------------------------------
     /**
      * Check if a polyline is open or closed.
+     * TODO Raise error for deleted ents ???
      * @param pline A polyline ID.
      * @returns True if closed, false if open.
      */
@@ -1140,6 +1344,76 @@ export class Sim {
         this.graph.snapshotCopyEdges(edge_type, ssid, x2x);
     }
     // =============================================================================================
+    // PRIVATE GRAPH METHODS
+    // =============================================================================================
+    /**
+     * Create the name for an attrib node.
+     * It will be something like this: '_att_pgons_area'.
+     * @param ent_type 
+     * @param att_name 
+     * @returns 
+     */
+     private _graphAttribNodeName(ent_type: ENT_TYPE, att_name: string): string {
+        return '_att_' + ent_type + att_name;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Create the name for an attrib value node.
+     * For example [1,2,3] will become  '1,2,3'.
+     * @param att_val 
+     * @returns 
+     */
+     private _graphAttribValNodeName(att_val: TAttribDataTypes): string {
+        return '$' + typeof(att_val) === 'object' ? JSON.stringify(att_val) : att_val.toString();
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Add an entity node to the graph. 
+     * The entity can be a posi, vert, edge, wire, point, pline, pgon, coll.
+     * The entity node will have a name.
+     * The entity_type node wil be connected to the entity node.
+     * @param ent_type 
+     * @returns 
+     */
+     private _graphAddEnt(ent_type: ENT_TYPE): string {
+        const ent_type_node: string = _GR_ENT_NODE.get(ent_type);
+        // create the node name, from prefix and then next count number
+        const ent_i: number = this.graph.degreeOut(ent_type_node, _GR_EDGE_TYPE.META);
+        const ent: string = ent_type + ent_i;
+        // add a node with name `ent`
+        this.graph.addNode(ent);
+        this.graph.setNodeProp(ent, 'ent_type', ent_type); 
+        // create an edge from the `ent_type` to the new ent
+        this.graph.addEdge(ent_type_node, ent, _GR_EDGE_TYPE.META);
+        // return the name of the new entity node
+        return ent;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Add an attribute node to the graph.
+     * Create the node name, from the entity type and attribute name.
+     * @param ent_type 
+     * @param att_name 
+     * @param data_type 
+     * @returns 
+     */
+     private _graphAddAttrib(ent_type: ENT_TYPE, att_name: string, data_type: DATA_TYPE): string {
+        const att: string = this._graphAttribNodeName(ent_type, att_name);
+        // add the node to the graph
+        // the new node has 4 properties
+        this.graph.addNode(att);
+        this.graph.setNodeProp(att, 'ent_type', ent_type); // the `entity_type` for this attribute, `posi`, `vert`, etc
+        this.graph.setNodeProp(att, 'name', att_name); // the name of the attribute
+        this.graph.setNodeProp(att, 'data_type', data_type); // the data type of this attribute
+        // create an edge from the node `ent_type_attribs` (e.g. posis_attribs) to the new attrib node
+        // the edge type is `meta`
+        this.graph.addEdge(_GR_ATTRIB_NODE.get(ent_type), att, _GR_EDGE_TYPE.META);
+        // create a new edge type for this attrib
+        this.graph.addEdgeType(att); // many to one
+        // return the name of the new attrib node
+        return att;
+    }
+    // =============================================================================================
     // UTILITY 
     // =============================================================================================
     /**
@@ -1161,7 +1435,7 @@ export class Sim {
         if (Array.isArray(value)) {
             return DATA_TYPE.LIST;
         }
-        if (val_type === 'object') { // TODO check this
+        if (val_type === 'object') {
             return DATA_TYPE.DICT;
         }
         throw new Error('Data type is not recognised:' + value + ' ' + typeof(value));

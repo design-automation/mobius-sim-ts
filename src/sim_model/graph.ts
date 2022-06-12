@@ -83,7 +83,7 @@ export class Graph {
             throw new Error('Node does not exist: ' + node + '.');
         }
         const props: Map<string, any> = this._nodes.get(node);
-        if (props === null || !props.has(prop_name)) { 
+        if (props === undefined || !props.has(prop_name)) { 
             throw new Error('Property does not exist.');
         }
         return props.get(prop_name);
@@ -139,7 +139,7 @@ export class Graph {
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Return true if the node node exists.
+     * Return true if the node node exists. 
      * @param node: The name of the node, a string.
      * @returns : True if the node exists, false otherwise.
      */
@@ -148,10 +148,8 @@ export class Graph {
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Add an edge to the graph, from node 0 to node 1.
-     * Will also add a reverse edge at the same time.
-     * If the edge type is O2O, and a previous edge already exists from node0, then this new edge 
-     * will replace both the forward and reverse edges. 
+     * Add an edge to the graph, from node 0 to node 1. If the edge_type has reverse edges, then a
+     * reverse edge will also be added. If the edge already exists, then no error is thrown. 
      * @param node0: The name of the start node.
      * @param node1: The name of the end node.
      * @param edge_type: The edge type.
@@ -207,11 +205,16 @@ export class Graph {
      * @param ssid: Snapshot ID (optional).
      */
      public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
+         // error check
+         if (!this._edges_reversed.has(edge_type)) {
+            throw new Error('Edge type does not exist.')
+        }
         // get ssid
         if (ssid === null) { ssid = this._curr_ssid; }
+        const rev: boolean = this._edges_reversed.get(edge_type);
         // null cases, del all edges which end at node1
         if (node0 == null) {
-            if (this._edges_reversed.get(edge_type)) {
+            if (!rev) {
                 throw new Error('Edge types "' + edge_type + '" does not have reverse edges.');
             }
             const edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
@@ -226,6 +229,7 @@ export class Graph {
         if (node1 == null) {
             const edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
             if (edges !== undefined && edges.get(Graph.FWD).has(node0)) {
+                // edges.get(Graph.FWD).delete(node0);
                 for (const node of edges.get(Graph.FWD).get(node0)) {
                     this.delEdge(node0, node, edge_type, ssid);
                 }
@@ -238,9 +242,6 @@ export class Graph {
         }
         if (node0 === node1) {
             throw new Error('Nodes cannot be the same.')
-        }
-        if (!this._edges_reversed.has(edge_type)) {
-            throw new Error('Edge type does not exist.')
         }
         // get edges
         const edges = this._edges.get(ssid).get(edge_type);
@@ -255,7 +256,7 @@ export class Graph {
             return;
         }
         // del rev edge from n1 to n0
-        if (this._edges_reversed.get(edge_type)) {
+        if (rev) {
             edges.get(Graph.REV).get(node1).delete(node0);
         }
     }
@@ -356,6 +357,68 @@ export class Graph {
             return [];
         }
         return Array.from(edges.get(Graph.REV).get(node));
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Advanced low level method - this can break graph consistency. Creates multiple edges by
+     * manually specifying the successors of a node. An existing successors will be overwritten. If
+     * this edge_type has reverse edges, then care needs to be taken to also update the
+     * predecessors.
+     * @param node0: The name of the start node.
+     * @param nodes1: A list of names of the sucessor nodes.
+     * @param edge_type: The edge type.
+     * @param ssid: Snapshot ID (optional).
+     */
+     public setSuccessors(node0: string, nodes1: string[], edge_type: string, ssid: number = null): void {
+        if (!this._nodes.has(node0)) {
+            throw new Error('Node does not exist: ' + node0 + '.');
+        }
+        // get ssid
+        if (ssid === null) { ssid = this._curr_ssid; }
+        // get successors
+        let edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
+        if (edges === undefined) {
+            edges = new Map();
+            edges.set(Graph.FWD, new Map());
+            if (this._edges_reversed.get(edge_type)) {
+                edges.set(Graph.REV, new Map());
+            }
+            this._edges.get(ssid).set(edge_type, edges);
+        }
+        // set successors
+        edges.get(Graph.FWD).set(node0, new Set(nodes1));
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Advanced low level method - this can break graph consistency. Creates multiple edges by
+     * manually specifying the predecessors of a node. Any existing predecessors will be
+     * overwritten. Care needs to be taken to also update the successors.
+     * @param node1: The name of the end node.
+     * @param nodes0: A list of names of the predecessor nodes.
+     * @param edge_type: The edge type.
+     * @param ssid: Snapshot ID (optional).
+     */
+     public setPredessors(node1: string, nodes0: string[], edge_type: string, ssid: number = null): void {
+        if (!this._nodes.has(node1)) {
+            throw new Error('Node does not exist: ' + node1 + '.');
+        }
+        if (!this._edges_reversed.get(edge_type)) {
+            throw new Error('Edge types "' + edge_type + '" does not have reverse edges.');
+        }
+        // get ssid
+        if (ssid === null) { ssid = this._curr_ssid; }
+        // get edges
+        let edges: TGraphFREdges = this._edges.get(ssid).get(edge_type);
+        if (edges === undefined) {
+            edges = new Map();
+            edges.set(Graph.FWD, new Map());
+            if (this._edges_reversed.get(edge_type)) {
+                edges.set(Graph.REV, new Map());
+            }
+            this._edges.get(ssid).set(edge_type, edges);
+        }
+        // set predecessors
+        edges.get(Graph.REV).set(node1, new Set(nodes0));
     }
     // ---------------------------------------------------------------------------------------------
     /**

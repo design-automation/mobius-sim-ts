@@ -14,7 +14,8 @@
     "author": "DA",
     "license": "MIT",
     "dependencies": {
-        "lodash": "^4.17.21"
+        "lodash": "^4.17.21",
+        "three": "^0.135.0"
     },
     "devDependencies": {
         "@types/jest": "^27.5.1",
