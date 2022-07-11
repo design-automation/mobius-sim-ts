@@ -104,7 +104,7 @@ function triangulate(coords: Txyz[], holes?: Txyz[][]): [number, number, number]
     }
 
     // get the matrix to transform from 2D to 3D
-    const coords_v: three.Vector3[] = coords.map( coord => new three.Vector3(...coord));
+    const coords_v: three.Vector3[] = coords.map( coord => new three.Vector3(...coord) );
     const matrix: three.Matrix4 = _getMatrix( coords_v );
 
     // check for null, which means no plane could be found

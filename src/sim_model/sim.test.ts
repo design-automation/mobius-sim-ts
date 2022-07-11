@@ -203,4 +203,42 @@ test('Copy some objects', () => {
     const pgon = sim.addPgon([p0, p1, p2]);
     const result = sim.copyEnts([point, pline, pgon]);
     expect(result).toEqual(['pt1', 'pl1', 'pg1']);
+    expect(sim.numEnts(ENT_TYPE.POSI)).toBe(6);
+    expect(sim.getPosiCoords(sim.getEnts(ENT_TYPE.POSI, 'pt1')[0])).toEqual([0,0,0]);
+
+});
+
+test('Copy some objects and move', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([1,2,3]);
+    const p1 = sim.addPosi([9,8,7]);
+    const p2 = sim.addPosi([0,0,0]);
+    const point = sim.addPoint(p2);
+    const pline = sim.addPline([p0, p1]);
+    const pgon = sim.addPgon([p0, p1, p2]);
+    const result = sim.copyEnts([point, pline, pgon], [10, 0, 0]);
+    expect(result).toEqual(['pt1', 'pl1', 'pg1']);
+    expect(sim.numEnts(ENT_TYPE.POSI)).toBe(6);
+    expect(sim.getPosiCoords(sim.getEnts(ENT_TYPE.POSI, 'pt1')[0])).toEqual([10,0,0]);
+})
+
+test('Pgon tris', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([0,0,0]);
+    const p1 = sim.addPosi([10,0,0]);
+    const p2 = sim.addPosi([10,10,0]);
+    const p3 = sim.addPosi([0,10,0]);
+    const pgon = sim.addPgon([p0, p1, p2, p3]);
+    expect(sim.numEnts(ENT_TYPE.TRI)).toBe(2);
+    expect(sim.getEnts(ENT_TYPE.TRI, 'pg0')).toEqual(['_t0', '_t1']);
+    expect(sim.getEnts(ENT_TYPE.TRI, 'ps0')).toEqual(['_t0']);
+});
+
+test('Copy posi with attribs', () => {
+    const sim: Sim = new Sim();
+    const p0 = sim.addPosi([0,0,0]);
+    sim.addAttrib(ENT_TYPE.POSI, 'test', DATA_TYPE.STR);
+    sim.setAttribVal(p0, 'test', 'hello');
+    const p1 = sim.copyEnts([p0])[0];
+    expect(sim.getAttribVal(p1, 'test')).toBe('hello');
 });

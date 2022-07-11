@@ -312,10 +312,9 @@ export class Graph {
      * Get multiple successors of a node .
      * The node 'n' is linked to each successor by a forward edge of type 'edge_type'.
      * If there are no successors, then an empty list is returned.
-     * If the edge type ends in 'o' (i.e. 'm2o' or 'o2o'), then an error is thrown.
      * @param node: The name of the node from which to find successors.
      * @param edge_type: The edge type.
-     * @param ssid; Snapshot ID.
+     * @param ssid: Snapshot ID.
      * @returns: A list of nodes names.
      */
     public successors(node: string, edge_type: string, ssid: number = null): string[] {
@@ -336,7 +335,6 @@ export class Graph {
      * Get multiple predecessors of a node .
      * The node 'n' is linked to each predecessor by a reverse edge of type 'edge_type'.
      * If there are no predecessors, then an empty list is returned.
-     * If the edge type starts with 'o' (i.e. 'o2o' or 'o2m'), then an error is thrown.
      * @param node: The name of the node from which to find predecessors.
      * @param edge_type: The edge type.
      * @param ssid: Snapshot ID (optional).
@@ -555,28 +553,32 @@ export class Graph {
      * @returns An integer, the ssid of the active snapshot.
      */
     public getActiveSnapshot(): number {
-         return this._curr_ssid;
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Clear all edges in the current active snapshot.
-     * @returns An integer, the ssid of the active snapshot.
-     */
-    public clearSnapshot(): void {
-        this._edges.set(this._curr_ssid, new Map());
+        return this._curr_ssid;
     }
     // ---------------------------------------------------------------------------------------------
     /**
      * Set the ID of the current active snapshot.
-     * If teh snapshot ID does not exist, an error will be thrown.
+     * If the snapshot ID does not exist, an error will be thrown.
      * @param ssid: The ID of an existing spanshot.
      * @returns An integer, the ssid of the active snapshot.
      */
-    public setActiveSnapshot(ssid: number): void {
+     public setActiveSnapshot(ssid: number): void {
         if (!this._edges.has(ssid)) {
             throw new Error('Snapshot ID does not exist.');
         }
         this._curr_ssid = ssid;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Clear all edges in the current active snapshot.
+     * @param ssid: An integer, the ssid of the snapshot.
+     * @returns Void
+     */
+    public clearSnapshot(ssid: number = null): void {
+        // get ssid
+        if (ssid === null) { ssid = this._curr_ssid; }
+        // create new map
+        this._edges.set(this._curr_ssid, new Map());
     }
     // ---------------------------------------------------------------------------------------------
     /**
