@@ -9,8 +9,6 @@ export class Triangulate {
     private graph: Graph;
     private sim: Sim;
     // ---------------------------------------------------------------------------------------------
-    private _map_tris_to_verts: Map<number, [string, string, string]>;
-    private _map_verts_to_tris: Map<string, number>;
     /**
      * CONSTRUCTOR
      */
@@ -26,64 +24,60 @@ export class Triangulate {
      * @param pgon 
      */
     public triangulatePgon(pgon: string): void {
-        throw new Error('Not implemented');
-        // see \src\mobius-sim\libs\geo-info\geom\GIGeomEditPgon.ts
+        // save all verts
+        const all_verts: string[] = [];
+        // get all wires
+        const wires: string[] = this.sim.getEnts(ENT_TYPE.WIRE, pgon);
+        // get the coords of the outer perimeter edge
+        const bound_verts: string[] = this.sim.getEnts(ENT_TYPE.VERT, wires[0]);
+        bound_verts.forEach( vert => all_verts.push(vert) );
+        const bound_coords: Txyz[] = bound_verts.map( vert => this.sim.getVertCoords(vert) );
+        // get the coords of the holes
+        const all_hole_coords: Txyz[][] = [];
+        for (let i = 1; i < wires.length; i++) {
+            const hole_verts: string[] = this.sim.getEnts(ENT_TYPE.VERT, wires[i]);
+            hole_verts.forEach(hole_vert => all_verts.push(hole_vert));
+            const hole_coords: Txyz[] = hole_verts.map( vert => this.sim.getVertCoords(vert) );
+            all_hole_coords.push(hole_coords);
+        }
+        // do the triangulation
+        const tris_i: [number, number, number][] = triangulate(bound_coords, all_hole_coords);
+        if (tris_i.length === 0) { return; }
+        // convert tri indexes to verts
+        const tris_verts: [string, string, string][] = tris_i.map(
+            three_i => three_i.map( i => all_verts[i] ) as [string, string, string]);
+        // add the triangles to the graph
+        this._graphAddTris(pgon, tris_verts);
     }
-    // ---------------------------------------------------------------------------------------------
+    // =============================================================================================
+    // PRIVATE METHODS
+    // =============================================================================================
     /**
-     * Never none
-     * @param tri_i
+     * Add an entity node to the graph. 
+     * The entity can be a posi, vert, edge, wire, point, pline, pgon, coll.
+     * The entity node will have a name.
+     * The entity_type node wil be connected to the entity node.
+     * @param pgon
+     * @param tris 
+     * @returns 
      */
-    public getTriVerts(tri_i: number): number[] {
-        throw new Error('Not implemented');
-        // return this._geom_maps.dn_tris_verts.get(tri_i); // WARNING BY REF
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Never none
-     * @param tri_i
-     */
-    public getTriPosis(tri_i: number): number[] {
-        throw new Error('Not implemented');
-        // const verts_i: number[] = this._geom_maps.dn_tris_verts.get(tri_i);
-        // return verts_i.map( vert_i => this._geom_maps.dn_verts_posis.get(vert_i));
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Never none
-     * @param pgon_i
-     */
-    public getPgonTris(pgon: string): number[] {
-        throw new Error('Not implemented');
-        // return this._geom_maps.dn_pgons_tris.get(pgon_i); // WARNING BY REF
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Returns undefined if none
-     * @param vert_i
-     */
-    public getVertTri(vert: string): number[] {
-        throw new Error('Not implemented');
-        // return this._geom_maps.up_verts_tris.get(vert_i); // WARNING BY REF
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Never none
-     * @param tri_i
-     */
-    public getTriPgon(tri_i: number): string {
-        throw new Error('Not implemented');
-        // return this._geom_maps.up_tris_pgons.get(tri_i);
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Never none
-     * @param tri_i
-     */
-    public getTriColls(tri_i: number): string[] {
-        throw new Error('Not implemented');
-        // const pgon_i: number = this._geom_maps.up_tris_pgons.get(tri_i);
-        // return this.modeldata.geom.nav.navPgonToColl(pgon_i);
+    private _graphAddTris(pgon: string, tris: [string, string, string][]): void {
+        const ent_type_node: string = _GR_ENT_NODE.get(ENT_TYPE.TRI);
+        for (const tri of tris) {
+            // create the node name, from prefix and then next count number
+            const ent: string = ENT_TYPE.TRI + this.graph.degreeOut(ent_type_node, _GR_EDGE_TYPE.META);
+            // add a node with name `ent`
+            this.graph.addNode(ent);
+            this.graph.setNodeProp(ent, 'ent_type', ENT_TYPE.TRI); 
+            // create an edge from the `ents_tris` to the new tri
+            this.graph.addEdge(ent_type_node, ent, _GR_EDGE_TYPE.META);
+            // add an edge from the pgon to the tri
+            this.graph.addEdge(pgon, ent, _GR_EDGE_TYPE.TRI); // TODO ???
+            // add edges from the tri to the verts
+            for (const vert of tri) {
+                this.graph.addEdge(ent, vert, _GR_EDGE_TYPE.TRI); // TODO ???
+            }
+        }
     }
 }
 // =================================================================================================
@@ -94,7 +88,7 @@ export class Triangulate {
  * If the coords cannot be triangulated, it returns [].
  * @param coords
  */
-function triangulate(coords: Txyz[], holes?: Txyz[][]): number[][] {
+function triangulate(coords: Txyz[], holes?: Txyz[][]): [number, number, number][] {
 
     // check if we have holes
     const has_holes: boolean = (holes !== undefined && holes.length !== 0);
@@ -152,7 +146,7 @@ function triangulate(coords: Txyz[], holes?: Txyz[][]): number[][] {
     const flat_tris_i: number[] = Earcut.triangulate(flat_vert_xys, hole_indices);
 
     // convert the triangles into lists of three
-    const tris_i: number[][] = [];
+    const tris_i: [number, number, number][] = [];
     for (let i = 0; i < flat_tris_i.length; i += 3) {
         tris_i.push([flat_tris_i[i], flat_tris_i[i + 1], flat_tris_i[i + 2]]);
     }
@@ -316,7 +310,7 @@ function _getMatrix(points: three.Vector3[]): three.Matrix4 {
  * Triangulate a 4 sided shape
  * @param coords
  */
- function _triangulateQuad(coords: Txyz[]): number[][] {
+ function _triangulateQuad(coords: Txyz[]): [number, number, number][] {
     // TODO this does not take into account degenerate cases
     // TODO two points in same location
     // TODO Three points that are colinear

@@ -12,6 +12,7 @@ export enum ENT_TYPE {
     VERT = '_v',
     EDGE = '_e',
     WIRE = '_w',
+    TRI = '_t',
     POINT = 'pt',
     PLINE = 'pl',
     PGON = 'pg',
@@ -50,7 +51,8 @@ export enum COMPARATOR {
 export enum _GR_EDGE_TYPE {
     ENTITY = 'entity',
     ATTRIB =  'attrib',
-    META = 'meta'
+    META = 'meta',
+    TRI = 'tri'
 }
 // =================================================================================================
 // TYPES
@@ -67,6 +69,7 @@ export const _GR_ENT_NODE: Map<ENT_TYPE, string> = new Map([
     [ENT_TYPE.VERT, '_ents_verts'],
     [ENT_TYPE.EDGE, '_ents_edges'],
     [ENT_TYPE.WIRE, '_ents_wires'],
+    [ENT_TYPE.TRI, '_ents_tris'],
     [ENT_TYPE.POINT, '_ents_points'],
     [ENT_TYPE.PLINE, '_ents_plines'],
     [ENT_TYPE.PGON, '_ents_pgons'],
@@ -234,12 +237,13 @@ export class Sim {
         this.tri = new Triangulate(this.graph, this);
 
         // graph
-        this.graph.addEdgeType(_GR_EDGE_TYPE.ENTITY); // many to many
-        this.graph.addEdgeType(_GR_EDGE_TYPE.ATTRIB); // many to one
-        this.graph.addEdgeType(_GR_EDGE_TYPE.META, false); // one to many
+        this.graph.addEdgeType(_GR_EDGE_TYPE.ENTITY);
+        this.graph.addEdgeType(_GR_EDGE_TYPE.ATTRIB);
+        this.graph.addEdgeType(_GR_EDGE_TYPE.META, false);
+        this.graph.addEdgeType(_GR_EDGE_TYPE.TRI);
         // create nodes for ents and attribs
         for (const ent_type of 
-                [ENT_TYPE.POSI, ENT_TYPE.VERT, ENT_TYPE.EDGE, ENT_TYPE.WIRE, 
+                [ENT_TYPE.POSI, ENT_TYPE.VERT, ENT_TYPE.EDGE, ENT_TYPE.WIRE, ENT_TYPE.TRI, 
                 ENT_TYPE.POINT, ENT_TYPE.PLINE, ENT_TYPE.PGON, ENT_TYPE.COLL]) {
             this.graph.addNode(_GR_ENT_NODE.get(ent_type));
             this.graph.addNode(_GR_ATTRIB_NODE.get(ent_type));
@@ -311,7 +315,8 @@ export class Sim {
         for (let i = 1; i < posis.length; i++) {
             this.addPgonHole(pgon, posis[i] as string[]);
         }
-        // TODO triangulate
+        // triangulate
+        this.tri.triangulatePgon(pgon);
         // return
         return pgon;
     }
@@ -331,11 +336,20 @@ export class Sim {
         this.graph.addEdge(pgon, wire, _GR_EDGE_TYPE.ENTITY);
         // verts and edges
         this._addEdgeSeq(posis, posis.length, true, VERT_TYPE.PGON_HOLE, wire);
-        // TODO triangulate
+        // triangulate
+        this.tri.triangulatePgon(pgon);
         //  return
         return wire;
     }
     // ---------------------------------------------------------------------------------------------
+    /**
+     * Add a sequnce of edges. Use by addPgon(), addPgonHole(), addPline()
+     * @param posis The list of posis.
+     * @param num_edges The number of edges to add.
+     * @param closed If true, and additional edge is added to close the loop.
+     * @param vert_type The vertex type, see VERT_TYPE
+     * @param parent The parent of the new edges. Wither a wire or a pline.
+     */
     private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, 
             vert_type: VERT_TYPE, parent: string): void {
         const num_verts: number = closed ? num_edges : num_edges + 1;
@@ -372,6 +386,14 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
+     * Triangulate a polygon.
+     * @param pgon The polygon ID.
+     */
+    public triangulatePgon(pgon: string): void {
+        this.tri.triangulatePgon(pgon);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
      * Make a copy of an list of entities. For objects, the object positions are also copied. For 
      * collections, the contents of the collection is also copied. 
      * TODO Raise error for deleted ents ???
@@ -380,7 +402,6 @@ export class Sim {
      */
     public copyEnts(ents: string[]): string[] {
         const ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> = new Map([
-            [ENT_TYPE.POSI, {old: [], new: []}],
             [ENT_TYPE.VERT, {old: [], new: []}],
             [ENT_TYPE.EDGE, {old: [], new: []}],
             [ENT_TYPE.WIRE, {old: [], new: []}],
@@ -393,15 +414,13 @@ export class Sim {
         for (const old_ent of ents) {
             const ent_type: ENT_TYPE = this.graph.getNodeProp(old_ent, 'ent_type');
             if (ent_type === ENT_TYPE.POSI) {
-                const new_posi: string = this.addPosi();
-                this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), [old_ent], [new_posi]);
-                copies.push(new_posi);
+                copies.push(this._copyPosi(old_ent));
             } else if (ent_type === ENT_TYPE.POINT) {
                 copies.push(this._copyPoint(ents_map, old_ent));
             } else if (ent_type === ENT_TYPE.PLINE) {
                 copies.push(this._copyPline(ents_map, old_ent));
             } else if (ent_type === ENT_TYPE.PGON) {
-                copies.push(this._copyPgon(ents_map, old_ent));
+                copies.push(this._copyPgon(ents_map, old_ent)); 
             } else if (ent_type === ENT_TYPE.COLL) {
                 copies.push(this._copyColl(ents_map, old_ent));
             }
@@ -410,18 +429,25 @@ export class Sim {
         this._copyTransferAttribs(ents_map);
         return copies;
     }
+    private _copyPosi(posi: string): string {
+        const new_posi: string = this.addPosi();
+        const att_val_node: string = this.graph.successors(posi, _GR_XYZ_NODE)[0];
+        this.graph.addEdge(new_posi, att_val_node, _GR_XYZ_NODE);
+        return new_posi;
+    }
+    private _copyPosis(posis: string[]): string[] {
+        return posis.map( posi => this._copyPosi(posi) );
+    }
     private _copyPoint(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_point: string): string {
         const old_posi: string = this.getEntPosis(old_point) as string;
-        const new_posi: string = this.addPosi();
-        const new_point: string = this.addPoint(old_posi);
-        this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), [old_posi], [new_posi]);
+        const new_posi: string = this._copyPosi(old_posi);
+        const new_point: string = this.addPoint(new_posi);
         this._copyAddEnts(ents_map.get(ENT_TYPE.POINT), [old_point], [new_point]);
         return new_point;
     }
     private _copyPline(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_pline: string): string {
         const old_posis: string[] = this.getEntPosis(old_pline) as string[];
-        const new_posis: string[] = old_posis.map(_ => this.addPosi());
-        this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), old_posis, new_posis);
+        const new_posis: string[] = this._copyPosis(old_posis);
         const new_pline: string = this.addPline(new_posis);
         for (const sub_ent_type of [ENT_TYPE.PLINE,ENT_TYPE.EDGE,ENT_TYPE.VERT]) {
             const old_ents: string[] = this.getEnts(sub_ent_type, old_pline);
@@ -432,9 +458,9 @@ export class Sim {
     }
     private _copyPgon(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}> , old_pgon: string): string {
         const old_posis: string[][] = this.getEntPosis(old_pgon) as string[][];
-        const new_posis: string[][] = old_posis.map(posis => posis.map(_ => this.addPosi()));
+        const new_posis: string[][] = [];
         for (let i = 0; i < old_posis.length; i++) {
-            this._copyAddEnts(ents_map.get(ENT_TYPE.POSI), old_posis[i], new_posis[i]);
+            new_posis.push(this._copyPosis(old_posis[i]));
         }
         const new_pgon: string = this.addPgon(new_posis);
         for (const sub_ent_type of [ENT_TYPE.PGON,ENT_TYPE.WIRE,ENT_TYPE.EDGE,ENT_TYPE.VERT]) {
@@ -1047,9 +1073,7 @@ export class Sim {
             this.graph.clearSnapshot();
         }
         const ent_sets: TEntSets = this.getEntSets(ents);
-        console.log(">>>>>1>", JSON.stringify(Array.from(ent_sets).map( v => [v[0], Array.from(v[1])])));
         if (invert) { this.invertEntSets(ent_sets); }
-        console.log(">>>>>2>", JSON.stringify(Array.from(ent_sets).map( v => [v[0], Array.from(v[1])])));
         // delete collctions and objects
         for (const coll of ent_sets.get(ENT_TYPE.COLL)) {
             this.del.delColl(coll);
@@ -1123,13 +1147,23 @@ export class Sim {
     /**
      * Get the XYZ coordinates of a position.
      * TODO Raise error for deleted ents ???
-     * TODO is this method really needed?
-     * @param ent A position ID.
+     * @param posi A position ID.
      * @returns The XYZ coordinates.
      */
-    public getPosiCoords(ent: string): Txyz { 
-        const att_val: string = this.graph.successors(ent, _GR_XYZ_NODE)[0];
+    public getPosiCoords(posi: string): Txyz { 
+        const att_val: string = this.graph.successors(posi, _GR_XYZ_NODE)[0];
         return this.graph.getNodeProp(att_val, 'value');
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Get the XYZ coordinates of a vertex.
+     * TODO Raise error for deleted ents ???
+     * @param vert A position ID.
+     * @returns The XYZ coordinates.
+     */
+     public getVertCoords(vert: string): Txyz { 
+        const posi: string = this.graph.successors(vert, _GR_EDGE_TYPE.ENTITY)[0];
+        return this.getPosiCoords(posi);
     }
     // ---------------------------------------------------------------------------------------------
     /**
@@ -1138,10 +1172,10 @@ export class Sim {
      * For collections, the contents of the collection will not be deleted.
      * TODO test
      * TODO Raise error for deleted ents ???
-     * @param ent The ID of the position.
+     * @param posi The ID of the position.
      * @param xyz A list of three numbers, the XYZ coordinates.
      */
-    public setPosiCoords(ent: string, xyz: Txyz): void {
+    public setPosiCoords(posi: string, xyz: Txyz): void {
         // get the name of the attribute value node
         const att_val_node: string = this._graphAttribValNodeName(xyz);
         // make sure that no node with the name already exists
@@ -1153,8 +1187,8 @@ export class Sim {
         // add an edge from the att_val_node to the attrib
         this.graph.addEdge(att_val_node, _GR_XYZ_NODE, _GR_EDGE_TYPE.ATTRIB); // att_val -> att
         // add and edge from the ent to the att_val_node
-        this.graph.delEdge(ent, null, _GR_XYZ_NODE);
-        this.graph.addEdge(ent, att_val_node, _GR_XYZ_NODE); // ent -> att_val; ent <- att_val;
+        this.graph.delEdge(posi, null, _GR_XYZ_NODE);
+        this.graph.addEdge(posi, att_val_node, _GR_XYZ_NODE); // ent -> att_val; ent <- att_val;
     }
     // =============================================================================================
     // QUERY
@@ -1304,6 +1338,85 @@ export class Sim {
         const end_posi: string = this.graph.successors(
             this.graph.successors(edges[edges.length - 1], _GR_EDGE_TYPE.ENTITY)[1], _GR_EDGE_TYPE.ENTITY)[0];
         return start_posi === end_posi;
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Get the next edge
+     * TODO Raise error for deleted ents ???
+     * TODO test
+     * @param edge An edge ID.
+     * @returns The next edge, or null.
+     */
+    public getNextEdge(edge: string): string { 
+        const verts: string[] = this.graph.successors(edge, _GR_EDGE_TYPE.ENTITY);
+        const edges: string[] = this.graph.predecessors(verts[1], _GR_EDGE_TYPE.ENTITY);
+        if (edges.length === 1) { return null; }
+        return edges[1];
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Get the next edge
+     * TODO Raise error for deleted ents ???
+     * TODO test
+     * @param edge An edge ID.
+     * @returns The previous edge, or null.
+     */
+     public getPrevEdge(edge: string): string { 
+        const verts: string[] = this.graph.successors(edge, _GR_EDGE_TYPE.ENTITY);
+        const edges: string[] = this.graph.predecessors(verts[0], _GR_EDGE_TYPE.ENTITY);
+        if (edges.length === 1) { return null; }
+        return edges[0];
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Given a set of edges, get the perimeter entities.
+     * TODO Test
+     * TODO this can be moved to the functions library
+     * @param ent_type
+     * @param edges
+     */
+    public perimeter(ent_type: ENT_TYPE, edges: string[]): string[] {
+        const edge_posis_map: Map<string, string[]> = new Map();
+        const edge_to_posi_pairs_map: Map<string, [string, string]> = new Map();
+        for (const edge of edges) {
+            const posi_pair: [string, string] = this.getEnts(ENT_TYPE.POSI, edge) as [string, string];
+            if (!edge_posis_map.has(posi_pair[0])) {
+                edge_posis_map.set(posi_pair[0], []);
+            }
+            edge_posis_map.get(posi_pair[0]).push(posi_pair[1]);
+            edge_to_posi_pairs_map.set(edge, posi_pair);
+        }
+        const perimeter_ents: Set<string> = new Set();
+        for (const edge of edges) {
+            const posi_pair: [string, string] = edge_to_posi_pairs_map.get(edge);
+            if (!edge_posis_map.has(posi_pair[1]) || edge_posis_map.get(posi_pair[1]).indexOf(posi_pair[0]) === -1) {
+                const found_ents: string[] = this.getEnts(ent_type, edge);
+                found_ents.forEach( found_ent => perimeter_ents.add(found_ent) );
+            }
+        }
+        return Array.from(perimeter_ents);
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
+     * Given a set of vertices, get the welded neighbour entities.
+     * TODO test
+     * TODO this can be moved to the functions library
+     * @param ent_type
+     * @param verts
+     */
+    public vertNeighbors(ent_type: ENT_TYPE, verts: string[]): string[] {
+        const neighbour_ents: Set<string> = new Set();
+        for (const vert of verts) {
+            const posi: string = this.getEntPosis(vert) as string;
+            const found_verts: string[] = this.getEnts(ENT_TYPE.VERT, posi);
+            for (const found_vert of found_verts) {
+                if (verts.indexOf(found_vert) === -1) {
+                    const found_ents: string[] = this.getEnts(ent_type, found_vert);
+                    found_ents.forEach( found_ent => neighbour_ents.add(found_ent) );
+                }
+            }
+        }
+        return Array.from(neighbour_ents);
     }
     // =============================================================================================
     // SNAPSHOTS 

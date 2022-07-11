@@ -315,8 +315,8 @@ export class Delete {
             // standard case, delete the next edge and del_vert
             this.__delVert__StandardCase(wire, del_vert);
         }
-        // for pgons, also update tris TODO
-        // this.modeldata.geom.edit_pgon.triPgons(pgon);
+        // triangulate
+        this.sim.triangulatePgon(pgon);
     }
     // ---------------------------------------------------------------------------------------------
     /**
