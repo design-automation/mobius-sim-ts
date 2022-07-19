@@ -451,9 +451,9 @@ export class Sim {
             } else if (ent_type === ENT_TYPE.POINT) {
                 copies.push(this._copyPoint(posis_map, ents_map, old_ent, vec));
             } else if (ent_type === ENT_TYPE.PLINE) {
-                copies.push(this._copyPline2(posis_map, ents_map, old_ent, vec));
+                copies.push(this._copyPline(posis_map, ents_map, old_ent, vec));
             } else if (ent_type === ENT_TYPE.PGON) {
-                copies.push(this._copyPgon2(posis_map, ents_map, old_ent, vec));
+                copies.push(this._copyPgon(posis_map, ents_map, old_ent, vec));
             } else if (ent_type === ENT_TYPE.COLL) {
                 copies.push(this._copyColl(posis_map, ents_map, old_ent, vec));
             }
@@ -504,7 +504,7 @@ export class Sim {
         return new_point;
     }
     // .............................................................................................
-    private _copyPline2(
+    private _copyPline(
         posis_map: Map<string, string>,
         ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
         old_pline: string, 
@@ -519,7 +519,7 @@ export class Sim {
         return new_pline;
     }
     // .............................................................................................
-    private _copyPgon2(
+    private _copyPgon(
         posis_map: Map<string, string>,
         ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
         old_pgon: string, 
@@ -617,10 +617,10 @@ export class Sim {
             coll_ents.push( this._copyPoint(posis_map, ents_map, old_point, vec) );
         }
         for (const old_pline of this.getEnts(ENT_TYPE.PLINE, old_coll)) {
-            coll_ents.push( this._copyPline2(posis_map, ents_map, old_pline, vec) );
+            coll_ents.push( this._copyPline(posis_map, ents_map, old_pline, vec) );
         }
         for (const old_pgon of this.getEnts(ENT_TYPE.PGON, old_coll)) {
-            coll_ents.push( this._copyPgon2(posis_map, ents_map, old_pgon, vec) );
+            coll_ents.push( this._copyPgon(posis_map, ents_map, old_pgon, vec) );
         }
         for (const old_coll_succ of this.getEnts(ENT_TYPE.COLL_SUCC, old_coll)) {
             coll_ents.push( this._copyColl(posis_map, ents_map, old_coll_succ) ); // recursive
@@ -986,7 +986,7 @@ export class Sim {
         target_ent_type: ENT_TYPE, 
         source_ents: string|string[] = null
     ): string[] {
-        // get all ents
+        // get all ents of type target_ent_type
         if (source_ents === null) {
             return this.graph.successors(
                 _GR_ENT_NODE.get(target_ent_type), 
@@ -994,11 +994,11 @@ export class Sim {
             );
         }
         source_ents = Array.isArray(source_ents) ? source_ents : [source_ents];
-        // get collections
+        // get collections from collections
         if (target_ent_type === ENT_TYPE.COLL_SUCC || target_ent_type === ENT_TYPE.COLL_PRED) {
             return this._navEnts(target_ent_type, source_ents, true);
         }
-        // get entities
+        // get target_ent_type from other entities
         return this._navEnts(target_ent_type, source_ents, false);
     }
     // .............................................................................................
@@ -1013,6 +1013,7 @@ export class Sim {
             const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
             let target_depth: number = _ENT_SEQ_DOWN.get(target_ent_type);
             const is_down: boolean = _ENT_SEQ_DOWN.get(source_ent_type) > target_depth;
+            if (is_down) { target_depth = _ENT_SEQ_UP.get(target_ent_type); }
             // create lists
             let search_ents: string[] = [source_ent];
             let next_ents: string[];
@@ -1053,15 +1054,12 @@ export class Sim {
         let nav_ents: string[] = [];
         if (is_down) {
             // search down
-            const source_depth: number = _ENT_SEQ_DOWN.get(search_ent_type);
-            if (source_depth > target_depth) {
+            if (_ENT_SEQ_DOWN.get(search_ent_type) > target_depth) {
                 nav_ents = this.graph.successors(search_ent, _GR_EDGE_TYPE.ENTITY);
             }
         } else {
             // search up
-            target_depth = _ENT_SEQ_UP.get(target_ent_type);
-            const source_depth: number = _ENT_SEQ_UP.get(search_ent_type);
-            if (source_depth < target_depth) {
+            if (_ENT_SEQ_UP.get(search_ent_type) < target_depth) {
                 nav_ents = this.graph.predecessors(search_ent, _GR_EDGE_TYPE.ENTITY);
             }
         }
@@ -1127,7 +1125,9 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Invert ent sets
+     * Invert ent sets. All ents will be inverted. For positions, the positions for any  
+     * objects in the input entity set will be treated as part of that entity set. So the inverted 
+     * positions will not include the object positions.
      * @param ent_sets
      */
     public invertEntSets(ent_sets: TEntSets): void {
@@ -1154,7 +1154,7 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
-     * Get sub ents of os a set of entites. The sub ents will include all the ents that are under
+     * Get sub ents of a set of entites. The sub ents will include all the ents that are under
      * the input ents, in the entity hierarchy. For example, if a polygon is passed in, then the
      * sub ents will include the positions, vertices, edges, wires of that polygon. If a collection 
      * if passed in, then the sub ents will inlude any points, polylines, polygons, and child 
@@ -1306,6 +1306,7 @@ export class Sim {
             throw new Error('Not implemented'); // TODO
         }
     }
+    // .............................................................................................
     private _getEdgeSeqPosis(edges: string[], add_last: boolean): string[] {
         const verts: string[] = edges.map( 
             edge => this.graph.successors(edge, _GR_EDGE_TYPE.ENTITY)[0]);
