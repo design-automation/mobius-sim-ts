@@ -204,9 +204,9 @@ export class Graph {
      * @param edge_type: The edge type.
      * @param ssid: Snapshot ID (optional).
      */
-     public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
-         // error check
-         if (!this._edges_reversed.has(edge_type)) {
+    public delEdge(node0: string, node1: string, edge_type: string, ssid: number = null): void {
+        // error check
+        if (!this._edges_reversed.has(edge_type)) {
             throw new Error('Edge type does not exist.')
         }
         // get ssid

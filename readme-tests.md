@@ -37,4 +37,4 @@ https://swizec.com/blog/how-to-configure-jest-with-typescript/
 
 # Execute tests
 
-npm run test
+`npm run test`

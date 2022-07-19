@@ -52,7 +52,7 @@ export enum COMPARATOR {
 export type TAttribDataTypes = string | number | boolean | any[] | object;
 export type Txyz = [number, number, number];
 export type TEntSets = Map<ENT_TYPE, Set<string>>;
-type TEntSeq = Map<ENT_TYPE, {idx: number, succ: _GR_EDGE_TYPE, pred: _GR_EDGE_TYPE}>;
+type TEntSeq = Map<ENT_TYPE, number>;
 // =================================================================================================
 // GRAPH NAMES
 // =================================================================================================
@@ -94,47 +94,59 @@ export enum _GR_EDGE_TYPE {
 // =================================================================================================
 // ENT SEQUENCES
 // =================================================================================================
-const _ENT_SEQ: TEntSeq = new Map([
-    [ENT_TYPE.POSI,  {idx: 0, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.VERT,  {idx: 1, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.EDGE,  {idx: 2, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.WIRE,  {idx: 3, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.POINT, {idx: 4, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.PLINE, {idx: 4, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.PGON,  {idx: 4, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.COLL,  {idx: 6, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}]
+const _ENT_SEQ_DOWN: TEntSeq = new Map([
+    [ENT_TYPE.POSI,  0], 
+    [ENT_TYPE.VERT,  1], 
+    [ENT_TYPE.EDGE,  2], 
+    [ENT_TYPE.WIRE,  3], 
+    [ENT_TYPE.POINT, 4], 
+    [ENT_TYPE.PLINE, 4], 
+    [ENT_TYPE.PGON,  4], 
+    [ENT_TYPE.COLL_SUCC, 5],
+    [ENT_TYPE.COLL,      6],
+    [ENT_TYPE.COLL_PRED, 7]
 ]);
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_CO_PT_PO: TEntSeq = new Map([
-    [ENT_TYPE.POSI,  {idx: 0, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-    [ENT_TYPE.POINT, {idx: 1, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-    [ENT_TYPE.COLL,  {idx: 6, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}]
+const _ENT_SEQ_UP: TEntSeq = new Map([
+    [ENT_TYPE.POSI,  0], 
+    [ENT_TYPE.VERT,  1], 
+    [ENT_TYPE.EDGE,  2], 
+    [ENT_TYPE.WIRE,  3], 
+    [ENT_TYPE.POINT, 1], 
+    [ENT_TYPE.PLINE, 3], 
+    [ENT_TYPE.PGON,  4], 
+    [ENT_TYPE.COLL_SUCC, 5],
+    [ENT_TYPE.COLL,      6],
+    [ENT_TYPE.COLL_PRED, 7]
 ]);
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_CO_PL_PO: TEntSeq = new Map([
-    [ENT_TYPE.POSI,  {idx: 0, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.VERT,  {idx: 1, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.EDGE,  {idx: 2, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.PLINE, {idx: 3, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}], 
-    [ENT_TYPE.COLL,  {idx: 6, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}]
-]);
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_CO_PG_PO: TEntSeq = new Map([
-     [ENT_TYPE.POSI, {idx: 0, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-     [ENT_TYPE.VERT, {idx: 1, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-     [ENT_TYPE.EDGE, {idx: 2, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-     [ENT_TYPE.WIRE, {idx: 3, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-     [ENT_TYPE.PGON, {idx: 4, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-     [ENT_TYPE.COLL, {idx: 6, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}]
-]);
-// -------------------------------------------------------------------------------------------------
-const _ENT_SEQ_CO_PG_TRI_PO: TEntSeq = new Map([
-    [ENT_TYPE.POSI, {idx: 0, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}],
-    [ENT_TYPE.VERT, {idx: 1, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.TRI}],
-    [ENT_TYPE.TRI,  {idx: 2, succ: _GR_EDGE_TYPE.TRI,    pred: _GR_EDGE_TYPE.TRI}],
-    [ENT_TYPE.PGON, {idx: 3, succ: _GR_EDGE_TYPE.TRI,    pred: _GR_EDGE_TYPE.ENTITY}],
-    [ENT_TYPE.COLL, {idx: 6, succ: _GR_EDGE_TYPE.ENTITY, pred: _GR_EDGE_TYPE.ENTITY}]
-]);
+// // -------------------------------------------------------------------------------------------------
+// const _ENT_SEQ_CO: TEntSeq = new Map([
+//     [ENT_TYPE.COLL_SUCC, 6],
+//     [ENT_TYPE.COLL,  8],
+//     [ENT_TYPE.COLL_PRED, 10]
+// ]);
+// // -------------------------------------------------------------------------------------------------
+// const _ENT_SEQ_CO_PT_PO: TEntSeq = new Map([
+//     [ENT_TYPE.POSI,  0],
+//     [ENT_TYPE.POINT, 1],
+//     [ENT_TYPE.COLL,  8]
+// ]);
+// // -------------------------------------------------------------------------------------------------
+// const _ENT_SEQ_CO_PL_PO: TEntSeq = new Map([
+//     [ENT_TYPE.POSI,  0], 
+//     [ENT_TYPE.VERT,  1], 
+//     [ENT_TYPE.EDGE,  2], 
+//     [ENT_TYPE.PLINE, 3], 
+//     [ENT_TYPE.COLL,  8]
+// ]);
+// // -------------------------------------------------------------------------------------------------
+// const _ENT_SEQ_CO_PG_PO: TEntSeq = new Map([
+//      [ENT_TYPE.POSI, 0],
+//      [ENT_TYPE.VERT, 1],
+//      [ENT_TYPE.EDGE, 2],
+//      [ENT_TYPE.WIRE, 3],
+//      [ENT_TYPE.PGON, 4],
+//      [ENT_TYPE.COLL, 8]
+// ]);
 // =================================================================================================
 // ENT SETS
 // =================================================================================================
@@ -255,11 +267,17 @@ export class Sim {
         this.graph.addEdgeType(_GR_EDGE_TYPE.META, false);
         this.graph.addEdgeType(_GR_EDGE_TYPE.TRI);
 
-        // create nodes for ents and attribs
+        // create nodes for ents
         for (const ent_type of 
                 [ENT_TYPE.POSI, ENT_TYPE.VERT, ENT_TYPE.EDGE, ENT_TYPE.WIRE, ENT_TYPE.TRI, 
                 ENT_TYPE.POINT, ENT_TYPE.PLINE, ENT_TYPE.PGON, ENT_TYPE.COLL]) {
             this.graph.addNode(_GR_ENT_NODE.get(ent_type));
+        }
+
+        // create nodes for attribs
+        for (const ent_type of 
+                [ENT_TYPE.POSI, ENT_TYPE.VERT, ENT_TYPE.EDGE, ENT_TYPE.WIRE, 
+                ENT_TYPE.POINT, ENT_TYPE.PLINE, ENT_TYPE.PGON, ENT_TYPE.COLL]) {
             this.graph.addNode(_GR_ATTRIB_NODE.get(ent_type));
         }
 
@@ -277,7 +295,9 @@ export class Sim {
      * @param xyz The XYZ coordinates, a list of three numbers.
      * @returns The ID of the new position.
      */
-    public addPosi(xyz: Txyz = null): string {
+    public addPosi(
+        xyz: Txyz = null
+    ): string {
         const posi: string = this._graphAddEnt(ENT_TYPE.POSI);
         if (xyz !== null) { this.setPosiCoords(posi, xyz); }
         return posi;
@@ -288,7 +308,9 @@ export class Sim {
      * @param posi A position ID.
      * @returns The ID of the new point.
      */
-    public addPoint(posi: string): string {
+    public addPoint(
+        posi: string
+    ): string {
         const point: string = this._graphAddEnt(ENT_TYPE.POINT);
         this.graph.addEdge(point, posi, _GR_EDGE_TYPE.ENTITY);
         return point;
@@ -299,7 +321,9 @@ export class Sim {
      * @param posis A list of position IDs.
      * @returns The ID of the new polyline.
      */
-    public addPline(posis: string[]): string {
+    public addPline(
+        posis: string[]
+    ): string {
         if (posis.length < 2) {
             throw new Error('Too few positions for polyline.');
         }
@@ -316,7 +340,9 @@ export class Sim {
      * @param posis A list of position IDs.
      * @returns The ID of the new polygon.
      */
-    public addPgon(posis: string[]|string[][]): string {
+    public addPgon(
+        posis: string[]|string[][]
+    ): string {
         posis = Array.isArray(posis[0]) ? posis : [posis] as string[][];
         if (posis[0].length < 3) {
             throw new Error('Too few positions for polygon.');
@@ -343,7 +369,10 @@ export class Sim {
      * @param posis A list of position IDs for the hole.
      * @returns The ID of the hole wire.
      */
-    public addPgonHole(pgon: string, posis: string[]): string {
+    public addPgonHole(
+        pgon: string, 
+        posis: string[]
+    ): string {
         if (posis.length < 3) {
             throw new Error('Too few positions for polygon hole.');
         }
@@ -366,8 +395,13 @@ export class Sim {
      * @param vert_type The vertex type, see VERT_TYPE
      * @param parent The parent of the new edges. Wither a wire or a pline.
      */
-    private _addEdgeSeq(posis: string[], num_edges: number, closed: boolean, 
-            vert_type: VERT_TYPE, parent: string): void {
+    private _addEdgeSeq(
+        posis: string[], 
+        num_edges: number, 
+        closed: boolean, 
+        vert_type: VERT_TYPE, 
+        parent: string
+    ): void {
         const num_verts: number = closed ? num_edges : num_edges + 1;
         const edges: string[] = [];
         let v0: string, v1: string;
@@ -405,7 +439,9 @@ export class Sim {
      * Triangulate a polygon.
      * @param pgon The polygon ID.
      */
-    public triangulatePgon(pgon: string): void {
+    public triangulatePgon(
+        pgon: string
+    ): void {
         this.tri.triangulatePgon(pgon);
     }
     // ---------------------------------------------------------------------------------------------
@@ -417,7 +453,10 @@ export class Sim {
      * @param vec Optional vector specifying the transplation of the positions.
      * @returns A list of IDs of the copied entities.
      */
-    public copyEnts(ents: string[], vec?: Txyz): string[] {
+    public copyEnts(
+        ents: string[], 
+        vec?: Txyz
+    ): string[] {
         // need to make sure that each posi is only copied once so that welds remain intact
         // the posis_map will stores old_posi -> new_posi
         const posis_map: Map<string, string> = new Map();
@@ -452,9 +491,13 @@ export class Sim {
         this._copyTransferAttribs(ents_map);
         return copies;
     }
-    private _copyPosi(posis_map: Map<string, string>, 
-            ents_map: Map<ENT_TYPE,{old: string[], new: string[]}>, 
-            old_posi: string, vec?: Txyz): string {
+    // .............................................................................................
+    private _copyPosi(
+        posis_map: Map<string, string>, 
+        ents_map: Map<ENT_TYPE,{old: string[], new: string[]}>, 
+        old_posi: string, 
+        vec?: Txyz
+    ): string {
         if (posis_map.has(old_posi)) { return posis_map.get(old_posi); }
         let new_posi: string;
         let att_val_node: string;
@@ -466,8 +509,6 @@ export class Sim {
             // create posi and move
             const xyz: Txyz = this.getPosiCoords(old_posi);
             new_posi = this.addPosi( [ xyz[0] + vec[0], xyz[1] + vec[1], xyz[2] + vec[2] ] );
-            console.log("moving posi", xyz, vec, [ xyz[0] + vec[0], xyz[1] + vec[1], xyz[2] + vec[2] ])
-
             att_val_node = this.graph.successors(new_posi, _GR_XYZ_NODE)[0];
         }
         this.graph.addEdge(new_posi, att_val_node, _GR_XYZ_NODE);
@@ -476,9 +517,13 @@ export class Sim {
         ents_map.get(ENT_TYPE.POSI).new.push(new_posi);
         return new_posi;
     }
-    private _copyPoint(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_point: string, vec?: Txyz): string {
+    // .............................................................................................
+    private _copyPoint(
+        posis_map: Map<string, string>,
+        ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
+        old_point: string, 
+        vec?: Txyz
+    ): string {
         const old_posi: string = this.getEntPosis(old_point) as string;
         const new_posi: string = this._copyPosi(posis_map, ents_map, old_posi, vec);
         const new_point: string = this.addPoint(new_posi);
@@ -487,9 +532,13 @@ export class Sim {
         ents_map.get(ENT_TYPE.POINT).new.push(new_point);
         return new_point;
     }
-    private _copyPline2(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_pline: string, vec?: Txyz): string {
+    // .............................................................................................
+    private _copyPline2(
+        posis_map: Map<string, string>,
+        ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
+        old_pline: string, 
+        vec?: Txyz
+    ): string {
         // create pline
         const new_pline: string = this._graphAddEnt(ENT_TYPE.PLINE);
         ents_map.get(ENT_TYPE.PLINE).old.push(old_pline);
@@ -498,9 +547,13 @@ export class Sim {
         this._copyEdgesVertsPosis(posis_map, ents_map, old_pline, new_pline, vec);
         return new_pline;
     }
-    private _copyPgon2(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_pgon: string, vec?: Txyz): string {
+    // .............................................................................................
+    private _copyPgon2(
+        posis_map: Map<string, string>,
+        ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
+        old_pgon: string, 
+        vec?: Txyz
+    ): string {
         // create a verts map for triangulation: old_vert -> new_vert
         const verts_map: Map<string, string> = new Map(); 
         // create pgon
@@ -531,9 +584,14 @@ export class Sim {
         // return the new polygon
         return new_pgon;
     }
-    private _copyEdgesVertsPosis(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_parent: string, new_parent: string, vec?: Txyz): Map<string, string> {
+    // .............................................................................................
+    private _copyEdgesVertsPosis(
+        posis_map: Map<string, string>,
+        ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
+        old_parent: string, 
+        new_parent: string, 
+        vec?: Txyz
+    ): Map<string, string> {
         // verts map: old_vert -> new_vert
         const verts_map: Map<string, string> = new Map();
         // loop
@@ -564,7 +622,7 @@ export class Sim {
         }
         // deal with first vert edge order
         // if this is a closed loop, the first two edges will be in wrong order
-        const first_vert: string = verts_map.get(verts_map.keys[0]);
+        const first_vert: string = verts_map.values().next().value;
         const edges2: string[] = this.graph.predecessors(first_vert, _GR_EDGE_TYPE.ENTITY);
         if (edges2.length === 2) {
             this.graph.setPredessors(first_vert, [edges2[1], edges2[0]], _GR_EDGE_TYPE.ENTITY);
@@ -572,53 +630,13 @@ export class Sim {
         // return the verts map for pgon triangulation
         return verts_map;
     }
-    /*
-    private _copyPosis(posis_map: Map<string, string>, posis: string[], vec?: Txyz): string[] {
-        return posis.map( posi => this._copyPosi(posis_map, posi, vec) );
-    }
-    private _copyPline(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_pline: string, vec?: Txyz): string {
-        const old_posis: string[] = this.getEntPosis(old_pline) as string[];
-        const new_posis: string[] = this._copyPosis(posis_map, old_posis, vec);
-        const new_pline: string = this.addPline(new_posis);
-        for (const sub_ent_type of [ENT_TYPE.PLINE,ENT_TYPE.EDGE,ENT_TYPE.VERT]) {
-            const old_ents: string[] = this.getEnts(sub_ent_type, old_pline);
-            const new_ents: string[] = this.getEnts(sub_ent_type, new_pline);
-            this._copyAddEnts(ents_map.get(sub_ent_type), old_ents, new_ents);
-        }
-        return new_pline;
-    }
-    private _copyPgon(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_pgon: string, vec?: Txyz): string {
-        const old_posis: string[][] = this.getEntPosis(old_pgon) as string[][];
-        const new_posis: string[][] = [];
-        for (let i = 0; i < old_posis.length; i++) {
-            new_posis.push(this._copyPosis(posis_map, old_posis[i], vec));
-        }
-        // CONSIDER this requires pgon to be triangulated again
-        // we could copy triangulation from previous pgon, might improve performance 
-        const new_pgon: string = this.addPgon(new_posis);
-        for (const sub_ent_type of [ENT_TYPE.PGON,ENT_TYPE.WIRE,ENT_TYPE.EDGE,ENT_TYPE.VERT]) {
-            const old_ents: string[] = this.getEnts(sub_ent_type, old_pgon);
-            const new_ents: string[] = this.getEnts(sub_ent_type, new_pgon);
-            this._copyAddEnts(ents_map.get(sub_ent_type), old_ents, new_ents);
-        }
-        return new_pgon;
-    }
-    private _copyAddEnts(ents: {old: string[], new: string[]}, 
-            old_ents: string[], new_ents: string[]): void {
-        if (old_ents.length  !== new_ents.length) {
-            throw new Error('Error copying ents: nunmber of sub-ents do not match');
-        }
-        old_ents.forEach( ent => ents.old.push(ent) );
-        new_ents.forEach( ent => ents.new.push(ent) );
-    }
-    */
-    private _copyColl(posis_map: Map<string, string>,
-            ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
-            old_coll: string, vec?: Txyz): string {
+    // .............................................................................................
+    private _copyColl(
+        posis_map: Map<string, string>,
+        ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>, 
+        old_coll: string, 
+        vec?: Txyz
+    ): string {
         const new_coll: string = this.addColl();
         // this._copyAddEnts(ents_map.get(ENT_TYPE.COLL), [old_coll], [new_coll]);
         ents_map.get(ENT_TYPE.COLL).old.push(old_coll);
@@ -639,7 +657,10 @@ export class Sim {
         coll_ents.forEach( ent => this.addCollEnt(new_coll, ent) );
         return new_coll;
     }
-    private _copyTransferAttribs(ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>) {
+    // .............................................................................................
+    private _copyTransferAttribs(
+        ents_map: Map<ENT_TYPE, {old: string[], new: string[]}>
+    ) {
         for (const [ent_type, ents] of ents_map.entries()) {
             if (ents.old.length !== ents.new.length) {
                 throw new Error('Error transferring attributes: Number of entities does not match.');
@@ -663,7 +684,9 @@ export class Sim {
      * @param ents A list of IDs of entitities to be cloned.
      * @returns A list of IDs of the cloned entities.
      */
-     public cloneEnts(ents: string[]): string[] {
+     public cloneEnts(
+        ents: string[]
+    ): string[] {
         const clones: string[] = this.copyEnts(ents);
         this.delEnts(ents);
         return clones;
@@ -687,7 +710,10 @@ export class Sim {
      * @param coll The ID of the collection to which the entity will be added.
      * @param ent The ID of the entity to be added to the collection.
      */
-    public addCollEnt(coll: string, ent: string): void {
+    public addCollEnt(
+        coll: string, 
+        ent: string
+    ): void {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
         if (!_COLL_ENT_TYPES.has(ent_type)) {
             throw new Error('Invalid entitiy for collections.');
@@ -703,7 +729,10 @@ export class Sim {
      * @param coll The ID of the collection from which the entity will be removed.
      * @param ent The ID of the entity to be removed from the collection.
      */
-    public remCollEnt(coll: string, ent: string): void {
+    public remCollEnt(
+        coll: string, 
+        ent: string
+    ): void {
         this.graph.delEdge(coll, ent, _GR_EDGE_TYPE.ENTITY);
     }
     // =============================================================================================
@@ -716,7 +745,11 @@ export class Sim {
      * @param att_name The name of the attribute to create. 
      * @param att_data_type The data type for the attribute values. (See DATA_TYPE)
      */
-    public addAttrib(ent_type: ENT_TYPE, att_name: string, att_data_type: DATA_TYPE): void {
+    public addAttrib(
+        ent_type: ENT_TYPE, 
+        att_name: string, 
+        att_data_type: DATA_TYPE
+    ): void {
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         if (!this.graph.hasNode(att)) {
             this._graphAddAttrib(ent_type, att_name, att_data_type);
@@ -731,7 +764,10 @@ export class Sim {
      * @param att_name The name of the attribute. 
      * @returns True is the attribute exists, false otherwise.
      */
-    public hasAttrib(ent_type: ENT_TYPE, att_name: string): boolean { 
+    public hasAttrib(
+        ent_type: ENT_TYPE, 
+        att_name: string
+    ): boolean { 
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         return this.graph.hasNode(att);
     }
@@ -741,7 +777,9 @@ export class Sim {
      * @param ent_type  The entity type for getting attributes. (See ENT_TYPE)
      * @returns A list of attrib names.
      */
-    public getAttribs(ent_type: ENT_TYPE): string[]  {
+    public getAttribs(
+        ent_type: ENT_TYPE
+    ): string[]  {
         return this.graph.successors(_GR_ATTRIB_NODE.get(ent_type), _GR_EDGE_TYPE.META)
             .map( att => this.graph.getNodeProp(att, 'name') );
     }
@@ -756,7 +794,11 @@ export class Sim {
      * @param att_name The name of the attribute.
      * @param att_value The attribute value to set.
      */
-    public setAttribVal(ent: string, att_name: string, att_value: TAttribDataTypes): void {
+    public setAttribVal(
+        ent: string, 
+        att_name: string, 
+        att_value: TAttribDataTypes
+    ): void {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         if (ent_type !== this.graph.getNodeProp(att, 'ent_type')) {
@@ -792,7 +834,10 @@ export class Sim {
      * @param att_name  The name of the attribute.
      * @returns The attribute value or `undefined` if no value.
      */
-    public getAttribVal(ent: string, att_name: string): TAttribDataTypes {
+    public getAttribVal(
+        ent: string, 
+        att_name: string
+    ): TAttribDataTypes {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         const att_vals: string[] = this.graph.successors(ent, att);
@@ -808,7 +853,10 @@ export class Sim {
      * @param ent  The ID of the entity for which to get the attribute value.
      * @param att_name The name of the attribute to delete.
      */
-     public delAttribVal(ent: string, att_name: string): void {
+     public delAttribVal(
+        ent: string, 
+        att_name: string
+    ): void {
         const ent_type: ENT_TYPE = this.graph.getNodeProp(ent, 'ent_type');
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         const att_vals: string[] = this.graph.successors(ent, att);
@@ -824,7 +872,10 @@ export class Sim {
      * @param att_name The name of the attribute.
      * @returns A list of all attribute values.
      */
-    public getAttribVals(ent_type: ENT_TYPE, att_name: string): TAttribDataTypes[] {
+    public getAttribVals(
+        ent_type: ENT_TYPE, 
+        att_name: string
+    ): TAttribDataTypes[] {
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         const att_vals: string[] = this.graph.predecessors(att, _GR_EDGE_TYPE.ATTRIB);
         const values: TAttribDataTypes[] = [];
@@ -840,7 +891,10 @@ export class Sim {
      * @param att_name The name of the attribute.
      * @returns The attribute value or null if no value.
      */
-    public getAttribDatatype(ent_type: ENT_TYPE, att_name: string): string {
+    public getAttribDatatype(
+        ent_type: ENT_TYPE, 
+        att_name: string
+    ): string {
         const att: string = this._graphAttribNodeName(ent_type, att_name);
         return this.graph.getNodeProp(att, 'data_type');
     }
@@ -852,7 +906,11 @@ export class Sim {
      * @param att_name The existing name of the attribute.
      * @param new_name The new name of the attribute.
      */
-     public renameAttrib(ent_type: ENT_TYPE, att_name: string, new_name: string): void {
+     public renameAttrib(
+        ent_type: ENT_TYPE, 
+        att_name: string, 
+        new_name: string
+    ): void {
         const old_att: string = this._graphAttribNodeName(ent_type, att_name);
         const att_data_type: DATA_TYPE = this.graph.getNodeProp(old_att, 'data_type');
         const new_att: string = this._graphAddAttrib(ent_type, new_name, att_data_type);
@@ -869,7 +927,9 @@ export class Sim {
      * @param att_name  The name of the attribute. 
      * @returns True is the attribute exists, false otherwise.
      */
-    public hasModelAttrib(att_name: string): boolean {
+    public hasModelAttrib(
+        att_name: string
+    ): boolean {
         return this.model_attribs.has(att_name);
     }
     // ---------------------------------------------------------------------------------------------
@@ -880,7 +940,10 @@ export class Sim {
      * @param att_name The name of the attribute.
      * @param att_value The attribute value to set.
      */
-    public setModelAttribVal(att_name: string, att_value: any): void {
+    public setModelAttribVal(
+        att_name: string, 
+        att_value: any
+    ): void {
         this.model_attribs.set(att_name, att_value);
     }
     // ---------------------------------------------------------------------------------------------
@@ -891,7 +954,9 @@ export class Sim {
      * @param att_name The name of the attribute.
      * @returns The attribute value or null if no value.
      */
-    public getModelAttribVal(att_name: string): any {
+    public getModelAttribVal(
+        att_name: string
+    ): any {
         return this.model_attribs.get(att_name);
     }
     // ---------------------------------------------------------------------------------------------
@@ -900,7 +965,9 @@ export class Sim {
      * TODO test
      * @param att_name The name of the attribute.
      */
-    public delModelAttribVal(att_name: string): void {
+    public delModelAttribVal(
+        att_name: string
+    ): void {
         this.model_attribs.delete(att_name);
     }
     // ---------------------------------------------------------------------------------------------
@@ -920,7 +987,9 @@ export class Sim {
      * @param ent_type The type of entity to search for in the model.
      * @returns A number of entities of the specified type in the model.
      */
-    public numEnts(ent_type: ENT_TYPE): number {
+    public numEnts(
+        ent_type: ENT_TYPE
+    ): number {
         return this.graph.degreeOut(
             _GR_ENT_NODE.get(ent_type), 
             _GR_EDGE_TYPE.META
@@ -942,7 +1011,10 @@ export class Sim {
      * target entities.
      * @returns A list of entity IDs (no duplicates).
      */
-    public getEnts(target_ent_type: ENT_TYPE, source_ents: string|string[] = null): string[] {
+    public getEnts(
+        target_ent_type: ENT_TYPE, 
+        source_ents: string|string[] = null
+    ): string[] {
         // get all ents
         if (source_ents === null) {
             return this.graph.successors(
@@ -950,118 +1022,412 @@ export class Sim {
                 _GR_EDGE_TYPE.META
             );
         }
-        // get ents from one ent
-        if (!Array.isArray(source_ents)) {
-            return this._nav(target_ent_type, source_ents);
-        }
-        // get ents from a list of ents
-        const ents_set: Set<string> = new Set();
-        for (const source_ent of source_ents) {
-            for (const target_ent of this._nav(target_ent_type, source_ent)) {
-                ents_set.add(target_ent);
-            }
-        }
-        return Array.from(ents_set);
-    }
-    private _getEntSeq(target_ent_type: ENT_TYPE, source_ent_type: ENT_TYPE): TEntSeq {
-        if (target_ent_type === ENT_TYPE.TRI || source_ent_type === ENT_TYPE.TRI) {
-            return _ENT_SEQ_CO_PG_TRI_PO;
-        } else if (target_ent_type === ENT_TYPE.POINT || source_ent_type === ENT_TYPE.POINT) {
-            return _ENT_SEQ_CO_PT_PO;
-        } else if (target_ent_type === ENT_TYPE.PLINE || source_ent_type === ENT_TYPE.PLINE) {
-            return _ENT_SEQ_CO_PL_PO;
-        } else if (target_ent_type === ENT_TYPE.PGON || source_ent_type === ENT_TYPE.PGON) {
-            return _ENT_SEQ_CO_PG_PO;
-        }
-        return _ENT_SEQ
-    }
-    private _nav(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+        source_ents = Array.isArray(source_ents) ? source_ents : [source_ents];
+        // get collections
         if (target_ent_type === ENT_TYPE.COLL_SUCC || target_ent_type === ENT_TYPE.COLL_PRED) {
-            return this._navColls(target_ent_type, source_ent);
+            return this._navEnts(target_ent_type, source_ents, true);
         }
-        const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
-        // zero step navigation
-        if (source_ent_type === target_ent_type) {
-            return [source_ent];
-        }
-        // get navigation distance, positive = down, ngative = up
-        const ent_seq: TEntSeq = this._getEntSeq(target_ent_type, source_ent_type);
-        const dist: number = ent_seq.get(source_ent_type).idx - ent_seq.get(target_ent_type).idx;
-        if (isNaN(dist)) { throw new Error('Error getting ents: dist is NaN'); }
-        // single step navigation
-        if (dist === 1 || dist === -1) {
-            const nav_ents: string[] = this._nav1(ent_seq, target_ent_type, source_ent, dist);
-            console.log(">>single> result nav1", nav_ents)
-            if (nav_ents.length > 0) {
-                const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ents[0], 'ent_type');
-                if (nav_ent_type === target_ent_type) {
-                    return nav_ents;
-                }
-            }
-            return [];
-        }
-        // multi step navigation
-        let ents: string[] = [source_ent];
-        const result_set: Set<string> = new Set();
-        let ents_set: Set<string>;
-        while (ents.length > 0) {
-            // ents_set.clear(); // avoid garbage collection
-            ents_set = new Set();
-            for (const ent of ents) {
-                const nav_ents: string[] = this._nav1(ent_seq, target_ent_type, ent, dist);
-                for (const nav_ent of nav_ents) {
-                    const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
-                    if (nav_ent_type === target_ent_type) {
-                        result_set.add(nav_ent);
-                        if (target_ent_type === ENT_TYPE.COLL) {
-                            ents_set.add(nav_ent);
-                        }
-                    } else if (ent_seq.has(nav_ent_type)) {
-                        if (dist > 0 && ent_seq.get(nav_ent_type).idx > ent_seq.get(target_ent_type).idx) {
-                            ents_set.add(nav_ent);
-                        } else if (dist < 0 && ent_seq.get(nav_ent_type).idx < ent_seq.get(target_ent_type).idx) {
-                            ents_set.add(nav_ent); 
-                        }
+        // get entities
+        return this._navEnts(target_ent_type, source_ents, false);
+    }
+    // .............................................................................................
+    private _navEnts(
+        target_ent_type: ENT_TYPE, 
+        source_ents: string[],
+        nav_colls: boolean
+    ): string[] {
+        const final_ents_set: Set<string> = new Set();
+        for (const source_ent of source_ents) {
+            // check if navigating down or up the hierarchy
+            const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+            let target_depth: number = _ENT_SEQ_DOWN.get(target_ent_type);
+            const is_down: boolean = _ENT_SEQ_DOWN.get(source_ent_type) > target_depth;
+            // create lists
+            let search_ents: string[] = [source_ent];
+            let next_ents: string[];
+            // search
+            while (search_ents.length > 0) {
+                next_ents = [];
+                for (const search_ent of search_ents) {
+                    const {next, final}: {next: string[], final: string[]} = 
+                        this._navGetNext(target_ent_type, target_depth, search_ent, is_down, nav_colls);
+                    // add to final result set
+                    for (const ent of final) {
+                        final_ents_set.add(ent);
+                    }
+                    // add to next level search
+                    for (const ent of next) {
+                        next_ents.push(ent);
                     }
                 }
+                search_ents = next_ents;
             }
-            ents = Array.from(ents_set);
         }
-        return Array.from(result_set)
+        return Array.from(final_ents_set);
     }
-    private _nav1(ent_seq:TEntSeq, target_ent_type: ENT_TYPE, source_ent: string, dist: number): string[] {
-        const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type') as ENT_TYPE;
-        return dist > 0 ?
-            this.graph.successors(source_ent, ent_seq.get(source_ent_type).succ):
-            this.graph.predecessors(source_ent, ent_seq.get(source_ent_type).pred);
-    }
-    private _navColls(target_ent_type: ENT_TYPE, source_ent: string): string[] {
-        const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
-        if (source_ent_type !== ENT_TYPE.COLL) {
-            throw new Error('Source entity must be a collection.');
+    // .............................................................................................
+    private _navGetNext(
+        target_ent_type: ENT_TYPE,
+        target_depth: number,
+        search_ent: string,
+        is_down: boolean,
+        nav_colls: boolean
+    ): {next: string[], final: string[]} {
+        const search_ent_type: ENT_TYPE = this.graph.getNodeProp(search_ent, 'ent_type');
+        // if searching for ents, check if source is target
+        if (!nav_colls && search_ent_type === target_ent_type) { 
+            return {next: [], final: [search_ent]}; 
         }
-        let ents: string[] = [source_ent];
-        const result_set: Set<string> = new Set();
-        let colls_set: Set<string>;
-        while (ents.length > 0) {
-            // colls_set.clear(); // avoid garbage collection
-            colls_set = new Set();
-            for (const ent of ents) {
-                const nav_ents: string[] = target_ent_type === ENT_TYPE.COLL_SUCC ? 
-                    this.graph.successors(ent, _GR_EDGE_TYPE.ENTITY) : 
-                    this.graph.predecessors(ent, _GR_EDGE_TYPE.ENTITY);
-                for (const nav_ent of nav_ents) {
-                    const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
-                    if (nav_ent_type === ENT_TYPE.COLL) {
-                        result_set.add(nav_ent);
-                        colls_set.add(nav_ent);
-                    }
+        // create list for results
+        let nav_ents: string[] = [];
+        if (is_down) {
+            // search down
+            const source_depth: number = _ENT_SEQ_DOWN.get(search_ent_type);
+            if (source_depth > target_depth) {
+                nav_ents = this.graph.successors(search_ent, _GR_EDGE_TYPE.ENTITY);
+            }
+        } else {
+            // search up
+            target_depth = _ENT_SEQ_UP.get(target_ent_type);
+            const source_depth: number = _ENT_SEQ_UP.get(search_ent_type);
+            if (source_depth < target_depth) {
+                nav_ents = this.graph.predecessors(search_ent, _GR_EDGE_TYPE.ENTITY);
+            }
+        }
+        // split result into two sub lists
+        const next_ents: string[] = [];
+        const final_ents: string[] = [];
+        if(nav_colls) {
+            for (const ent of nav_ents) {
+                if (this.graph.getNodeProp(ent, 'ent_type') === ENT_TYPE.COLL) {
+                    final_ents.push(ent);
+                }
+                next_ents.push(ent)
+            }
+        } else {
+            for (const ent of nav_ents) {
+                if (this.graph.getNodeProp(ent, 'ent_type') === target_ent_type) {
+                    final_ents.push(ent);
+                } else {
+                    next_ents.push(ent)
                 }
             }
-            ents = Array.from(colls_set);
         }
-        return Array.from(result_set)
+        // return the two lists
+        return {next: next_ents, final: final_ents};
     }
+    // // .............................................................................................
+    // private _navColls(target_ent_type: ENT_TYPE, source_ents: string[]): string[] {
+    //     const target_depth: number = _ENT_SEQ_DOWN.get(target_ent_type);
+    //     const result_ents_set: Set<string> = new Set();
+    //     for (const source_ent of source_ents) {
+    //         // get direction, down or up
+    //         const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+    //         const is_down: boolean = _ENT_SEQ_DOWN.get(source_ent_type) > target_depth;
+    //         // check source is collection
+    //         if (source_ent_type !== ENT_TYPE.COLL) {
+    //             throw new Error('When searching collections, the source entity must be a collection.');
+    //         }
+    //         // create lists
+    //         let search_ents: string[] = [source_ent];
+    //         let next_ents: string[];
+    //         // search
+    //         while (search_ents.length > 0) {
+    //             next_ents = [];
+    //             for (const search_ent of search_ents) {
+    //                 // get the next set of ents
+    //                 for (const nav_ent of this._navGetNext(search_ent, is_down)) {
+    //                     const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
+    //                     // check overshoot
+    //                     if (this._navOvershoot(target_depth, is_down, nav_ent_type)) {
+    //                         continue;
+    //                     }
+    //                     // check if target found
+    //                     if (nav_ent_type === ENT_TYPE.COLL) { 
+    //                         result_ents_set.add(nav_ent); 
+    //                     }
+    //                     // add to next search
+    //                     next_ents.push(nav_ent);
+    //                 }
+    //             }
+    //             search_ents = next_ents;
+    //         }
+    //     }
+    //     return Array.from(result_ents_set);
+    // }
+    // // .............................................................................................
+    // private _navEnts(
+    //     target_ent_type: ENT_TYPE, 
+    //     source_ents: string[],
+    // ): string[] {
+    //     const target_depth: number = _ENT_SEQ_DOWN.get(target_ent_type);
+    //     const result_ents_set: Set<string> = new Set();
+    //     for (const source_ent of source_ents) {
+    //         // get direction, down or up
+    //         const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+    //         const is_down: boolean = _ENT_SEQ_DOWN.get(source_ent_type) > target_depth;
+    //         // create lists
+    //         let search_ents: string[] = [source_ent];
+    //         let next_ents: string[];
+    //         // search
+    //         while (search_ents.length > 0) {
+    //             next_ents = [];
+    //             for (const search_ent of search_ents) {
+    //                 const search_ent_type: ENT_TYPE = this.graph.getNodeProp(search_ent, 'ent_type');
+    //                 // check if target found
+    //                 if (search_ent_type === target_ent_type) { 
+    //                     result_ents_set.add(search_ent); 
+    //                     continue;
+    //                 }
+    //                 // check overshoot
+    //                 if (this._navOvershoot(target_depth, is_down, search_ent_type)) {
+    //                     continue;
+    //                 }
+    //                 // get the next set of ents
+    //                 for (const nav_ent of this._navGetNext(search_ent, is_down)) {
+    //                     // add to next search
+    //                     next_ents.push(nav_ent);
+    //                 }
+    //             }
+    //             search_ents = next_ents;
+    //         }
+    //     }
+    //     return Array.from(result_ents_set);
+    // }
+    // // .............................................................................................
+    // private _navOvershoot(
+    //     target_depth: number,
+    //     is_down: boolean,
+    //     source_ent_type: ENT_TYPE
+    // ): boolean {
+        
+    //     if (is_down) {
+    //         const source_depth: number = _ENT_SEQ_DOWN.get(source_ent_type);
+    //         if (source_depth < target_depth) { return true; }
+    //     } else {
+    //         const source_depth: number = _ENT_SEQ_UP.get(source_ent_type);
+    //         if (source_depth > target_depth) { return true; }
+    //     }
+    //     return false;
+    // }
+    // // .............................................................................................
+    // private _navGetNext(
+    //     source_ent: string,
+    //     is_down: boolean,
+    // ): string[] {
+    //     const nav_ents: string[] = is_down ? 
+    //         this.graph.successors(source_ent, _GR_EDGE_TYPE.ENTITY) :
+    //         this.graph.predecessors(source_ent, _GR_EDGE_TYPE.ENTITY);
+    //     return nav_ents;
+    // }
+    // .............................................................................................
+    // private _navRec(
+    //     target_ent_type: ENT_TYPE, 
+    //     source_ent_type: ENT_TYPE, 
+    //     source_ent: string,
+    //     is_down: boolean
+    // ): string[] {
+    //     const source_depth: number = _ENT_SEQ.get(source_ent_type);
+    //     const target_depth: number = _ENT_SEQ.get(target_ent_type);
+    //     // check target found
+    //     if (source_ent_type === target_ent_type && target_depth < 5) { return [source_ent]; }
+    //     // check overshoot
+    //     if (this._navOvershoot) { return []; }
+    //     // if (this._navOvershoot(target_ent_type, source_ent_type, is_down)) { return []; }
+    //     // get the next set of ents from source_ent
+    //     const ents1: string[] = is_down ? 
+    //         this.graph.successors(source_ent, _GR_EDGE_TYPE.ENTITY) :
+    //         this.graph.predecessors(source_ent, _GR_EDGE_TYPE.ENTITY)
+    //     // recusrsive call
+    //     const result_ents: string[] = [];
+    //     for (const ent1 of ents1) {
+    //         const ent1_type: ENT_TYPE = this.graph.getNodeProp(ent1, 'ent_type');
+    //         for (const ent2 of this._navRec(target_ent_type, ent1_type, ent1, is_down)) {
+    //             result_ents.push(ent2);
+    //         }
+    //     }
+    //     // return the ents
+    //     return result_ents;
+    // }
+
+    // .............................................................................................
+    // private _navOvershoot(
+    //     target_ent_type: ENT_TYPE, 
+    //     source_ent_type: ENT_TYPE, 
+    //     is_down: boolean
+    // ): boolean {
+    //     const source_depth: number = _ENT_SEQ.get(source_ent_type);
+    //     const target_depth: number = _ENT_SEQ.get(target_ent_type);
+    //     if (source_depth > 5 && target_depth > 5) {
+    //         if (is_down) {
+    //             if (source_depth < target_depth) { return true; }
+    //         } else {
+    //             if (source_depth > target_depth) { return true; }
+    //         }
+    //         return false;
+    //     } else {
+    //         if (is_down) {
+    //             if (source_depth <= target_depth) { return true; }
+    //         } else {
+    //             if (source_depth >= target_depth) { return true; }
+    //         }
+    //         return false;
+    //     }
+        
+    // }
+    // // .............................................................................................
+    // private _getEntSeq(target_ent_type: ENT_TYPE, source_ent_type: ENT_TYPE): TEntSeq {
+    //     if (target_ent_type === ENT_TYPE.PGON || source_ent_type === ENT_TYPE.PGON) {
+    //         return _ENT_SEQ_CO_PG_PO;
+    //     } else if (target_ent_type === ENT_TYPE.PLINE || source_ent_type === ENT_TYPE.PLINE) {
+    //         return _ENT_SEQ_CO_PL_PO;
+    //     } else if (target_ent_type === ENT_TYPE.POINT || source_ent_type === ENT_TYPE.POINT) {
+    //         return _ENT_SEQ_CO_PT_PO;
+    //     } else if ((target_ent_type === ENT_TYPE.COLL_SUCC || target_ent_type === ENT_TYPE.COLL_PRED)
+    //         && source_ent_type === ENT_TYPE.COLL) {
+    //         return _ENT_SEQ_CO;
+    //     }
+    //     return _ENT_SEQ
+    // }
+    // // .............................................................................................
+    // private _navRec(
+    //     target_ent_type: ENT_TYPE, 
+    //     source_ent_type: ENT_TYPE, 
+    //     source_ent: string, 
+    //     ent_seq: TEntSeq
+    // ): string[] {
+    //     // check if not in entity sequence, return empty list
+    //     if (!ent_seq.has(source_ent_type)) { return []; }
+    //     // check target found
+    //     if (source_ent_type === target_ent_type) { return [source_ent]; }
+    //     // get the next set of ents from source_ent
+    //     const ents1: string[] = ent_seq.get(source_ent_type) > ent_seq.get(target_ent_type) ? 
+    //         this.graph.successors(source_ent, _GR_EDGE_TYPE.ENTITY) :
+    //         this.graph.predecessors(source_ent, _GR_EDGE_TYPE.ENTITY)
+    //     // recusrsive call
+    //     const result_ents: string[] = ent_seq === _ENT_SEQ_CO ? [source_ent] : [];
+    //     for (const ent1 of ents1) {
+    //         const ent1_type: ENT_TYPE = this.graph.getNodeProp(ent1, 'ent_type');
+    //         for (const ent2 of this._navRec(target_ent_type, ent1_type, ent1, ent_seq)) {
+    //             result_ents.push(ent2);
+    //         }
+    //     }
+    //     // return the ents
+    //     return result_ents;
+    // }
+    // .............................................................................................
+    // private _nav(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+    //     const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+    //     // zero step navigation
+    //     if (source_ent_type === target_ent_type) {
+    //         return [source_ent];
+    //     }
+    //     // get navigation distance, positive = down, ngative = up
+    //     const ent_seq: TEntSeq = this._getEntSeq(target_ent_type, source_ent_type);
+    //     // check
+    //     if (!ent_seq.has(source_ent_type) || !ent_seq.has(target_ent_type)) {
+    //         throw new Error('Error getting ents: cannot find entity type.'); 
+    //     }
+    //     // single step navigation
+    //     const dist: number = ent_seq.get(source_ent_type) - ent_seq.get(target_ent_type);
+    //     const nav_down: boolean = dist > 0;
+    //     if (dist === 1 || dist === -1) {
+    //         return this._navSingleStep(target_ent_type, source_ent, nav_down);
+    //     }
+    //     // nav colls
+    //     if (target_ent_type === ENT_TYPE.COLL_SUCC || target_ent_type === ENT_TYPE.COLL_PRED) {
+    //         // return this._navColls(target_ent_type, source_ent);
+    //         return this._navMultiStep(ENT_TYPE.COLL, source_ent, ent_seq, nav_down);
+    //     }
+    //     // multi step navigation
+    //     return this._navMultiStep(target_ent_type, source_ent, ent_seq, nav_down);
+    // }
+    // .............................................................................................
+    // private _nav2(source_ent: string, dist: number): string[] {
+    //     if (dist === 0) {
+    //         return [source_ent];
+    //     } else if (dist > 0) {
+    //         return this.graph.successors(source_ent, _GR_EDGE_TYPE.ENTITY);
+    //     } else {
+    //         this.graph.predecessors(source_ent, _GR_EDGE_TYPE.ENTITY);
+    //     }
+    // }
+    // .............................................................................................
+    // private _navSingleStep(target_ent_type: ENT_TYPE, source_ent: string, nav_down: boolean): string[] {
+    //     const nav_ents: string[] = this._nav1(source_ent, nav_down);
+    //     if (nav_ents.length > 0) {
+    //         // check the first ent, is it matches return all ents
+    //         const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ents[0], 'ent_type');
+    //         if (nav_ent_type === target_ent_type) {
+    //             return nav_ents;
+    //         }
+    //     }
+    //     return [];
+    // }
+    // .............................................................................................
+    // private _navMultiStep(target_ent_type: ENT_TYPE, source_ent: string, 
+    //         ent_seq:TEntSeq, nav_down: boolean): string[] {
+    //     const result_ents: Set<string> = new Set();
+    //     let search_ents: Set<string> = new Set([source_ent]);
+    //     let next_ents: Set<string>;
+    //     while (search_ents.size > 0) {
+    //         // ents_set.clear(); // avoid garbage collection
+    //         next_ents = new Set();
+    //         for (const ent of search_ents) {
+    //             for (const nav_ent of this._nav1(ent, nav_down)) {
+    //                 const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
+    //                 if (nav_ent_type === target_ent_type) {
+    //                     result_ents.add(nav_ent);
+    //                     // if (target_ent_type === ENT_TYPE.COLL) {
+    //                     //     ents_set.add(nav_ent);
+    //                     // }
+    //                 } else if (ent_seq.has(nav_ent_type)) {
+    //                     const is_down: boolean = ent_seq.get(nav_ent_type) > ent_seq.get(target_ent_type);
+    //                     if ( nav_down && is_down ) {
+    //                         next_ents.add(nav_ent);
+    //                     } else if ( !nav_down && !is_down ) {
+    //                         next_ents.add(nav_ent); 
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         search_ents = next_ents;
+    //     }
+    //     return Array.from(result_ents)
+    // }
+    // .............................................................................................
+    // private _nav1(source_ent: string, nav_down: boolean): string[] {
+    //     if (nav_down) {
+    //         return this.graph.successors(source_ent, _GR_EDGE_TYPE.ENTITY);
+    //     } else {
+    //         this.graph.predecessors(source_ent, _GR_EDGE_TYPE.ENTITY);
+    //     }
+    // }
+    // .............................................................................................
+    // private _navColls(target_ent_type: ENT_TYPE, source_ent: string): string[] {
+    //     const source_ent_type: ENT_TYPE = this.graph.getNodeProp(source_ent, 'ent_type');
+    //     if (source_ent_type !== ENT_TYPE.COLL) {
+    //         throw new Error('Source entity must be a collection.');
+    //     }
+    //     const nav_down: boolean = target_ent_type === ENT_TYPE.COLL_SUCC;
+    //     const result_set: Set<string> = new Set();
+    //     let search_ents: Set<string> = new Set([source_ent]);
+    //     let next_ents: Set<string>;
+    //     while (search_ents.size > 0) {
+    //         next_ents = new Set();
+    //         for (const ent of search_ents) {
+    //             for (const nav_ent of this._nav1(ent, nav_down)) {
+    //                 const nav_ent_type: ENT_TYPE = this.graph.getNodeProp(nav_ent, 'ent_type');
+    //                 if (nav_ent_type === ENT_TYPE.COLL) {
+    //                     result_set.add(nav_ent);
+    //                     next_ents.add(nav_ent);
+    //                 }
+    //             }
+    //         }
+    //         search_ents = next_ents;
+    //     }
+    //     return Array.from(result_set)
+    // }
     // ---------------------------------------------------------------------------------------------
     /**
      * 
@@ -1181,10 +1547,12 @@ export class Sim {
         }
         return ent_sets;
     }
+    // .............................................................................................
     private _getPointSubEnts(point: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
         ent_sets.get(ENT_TYPE.POINT).add(point);
         ent_sets.get(ENT_TYPE.POSI).add(this.getEnts(ENT_TYPE.POSI, point)[0]);
     }
+    // .............................................................................................
     private _getPlineSubEnts(pline: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
         ent_sets.get(ENT_TYPE.PLINE).add(pline);
         this.getEnts(ENT_TYPE.EDGE, pline).map(edge => ent_sets.get(ENT_TYPE.EDGE).add(edge));
@@ -1193,6 +1561,7 @@ export class Sim {
             ent_sets.get(ENT_TYPE.POSI).add(this.getEnts(ENT_TYPE.POSI, vert)[0]);
         }
     }
+    // .............................................................................................
     private _getPgonSubEnts(pgon: string, ent_sets: Map<ENT_TYPE, Set<string>>): void {
         ent_sets.get(ENT_TYPE.PGON).add(pgon);
         const wires = this.getEnts(ENT_TYPE.WIRE, pgon);
@@ -1292,6 +1661,18 @@ export class Sim {
     }
     // ---------------------------------------------------------------------------------------------
     /**
+     * Get the XYZ coordinates of a vertex.
+     * TODO Raise error for deleted ents ???
+     * @param vert A position ID.
+     * @returns The XYZ coordinates.
+     */
+     public getVertCoords(vert: string): Txyz { 
+        const posi: string = this.graph.successors(vert, _GR_EDGE_TYPE.ENTITY)[0];
+        const att_val: string = this.graph.successors(posi, _GR_XYZ_NODE)[0];
+        return this.graph.getNodeProp(att_val, 'value');
+    }
+    // ---------------------------------------------------------------------------------------------
+    /**
      * Get the XYZ coordinates of a position.
      * TODO Raise error for deleted ents ???
      * @param posi A position ID.
@@ -1300,17 +1681,6 @@ export class Sim {
     public getPosiCoords(posi: string): Txyz { 
         const att_val: string = this.graph.successors(posi, _GR_XYZ_NODE)[0];
         return this.graph.getNodeProp(att_val, 'value');
-    }
-    // ---------------------------------------------------------------------------------------------
-    /**
-     * Get the XYZ coordinates of a vertex.
-     * TODO Raise error for deleted ents ???
-     * @param vert A position ID.
-     * @returns The XYZ coordinates.
-     */
-     public getVertCoords(vert: string): Txyz { 
-        const posi: string = this.graph.successors(vert, _GR_EDGE_TYPE.ENTITY)[0];
-        return this.getPosiCoords(posi);
     }
     // ---------------------------------------------------------------------------------------------
     /**
